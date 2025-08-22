@@ -1,0 +1,23 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Atmel Studio Solution File, Format Version 11.00
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{54F91283-7BC4-4236-8FF9-10F437C3AD48}") = "BatMod-I2C-Test", "BatMod-I2C-Test.cproj", "{C3C6674C-1D15-40A6-815E-EBF382DC3FD7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|AVR = Debug|AVR
+		Release|AVR = Release|AVR
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C3C6674C-1D15-40A6-815E-EBF382DC3FD7}.Debug|AVR.ActiveCfg = Release|AVR
+		{C3C6674C-1D15-40A6-815E-EBF382DC3FD7}.Debug|AVR.Build.0 = Release|AVR
+		{C3C6674C-1D15-40A6-815E-EBF382DC3FD7}.Release|AVR.ActiveCfg = Release|AVR
+		{C3C6674C-1D15-40A6-815E-EBF382DC3FD7}.Release|AVR.Build.0 = Release|AVR
+		{C3C6674C-1D15-40A6-815E-EBF382DC3FD7}.Release|AVR.Deploy.0 = Release|AVR
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

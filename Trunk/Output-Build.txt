@@ -1,0 +1,36 @@
+﻿------ Build started: Project: ArduinoTestSW, Configuration: Release AVR ------
+Build started.
+Project "ArduinoTestSW.cproj" (default targets):
+Target "PreBuildEvent" skipped, due to false condition; ('$(PreBuildEvent)'!='') was evaluated as (''!='').
+Target "CoreBuild" in file "C:\Program Files (x86)\Atmel\Studio\7.0\Vs\Compiler.targets" from project "C:\Users\oliver.clay\OneDrive - The Magstim Company Ltd\Documents\Arduino\src\ArduinoTestSW.cproj" (target "Build" depends on it):
+	Task "RunCompilerTask"
+		Shell Utils Path C:\Program Files (x86)\Atmel\Studio\7.0\shellUtils
+		C:\Program Files (x86)\Atmel\Studio\7.0\shellUtils\make.exe all --jobs 4 --output-sync 
+		Building file: .././eeprom.c
+		Invoking: AVR/GNU C Compiler : 4.9.2
+		"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe"  -x c -funsigned-char -funsigned-bitfields -DNDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.1.130\include"  -Os -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -Wall -mmcu=atmega328p -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.1.130\gcc\dev\atmega328p" -c -std=gnu99 -MD -MP -MF "eeprom.d" -MT"eeprom.d" -MT"eeprom.o"   -o "eeprom.o" ".././eeprom.c" 
+		Finished building: .././eeprom.c
+		Building target: ArduinoTestSW.elf
+		Invoking: AVR/GNU Linker : 4.9.2
+		"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe" -o ArduinoTestSW.elf  analogue.o asci.o eeprom.o i2c.o main.o menu.o PCA9534.o romdata.o   -Wl,-Map="ArduinoTestSW.map" -Wl,--start-group -Wl,-lm  -Wl,--end-group -Wl,--gc-sections -mmcu=atmega328p -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.1.130\gcc\dev\atmega328p"  
+		Finished building target: ArduinoTestSW.elf
+		"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -O ihex -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures  "ArduinoTestSW.elf" "ArduinoTestSW.hex"
+		"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -j .eeprom  --set-section-flags=.eeprom=alloc,load --change-section-lma .eeprom=0  --no-change-warnings -O ihex "ArduinoTestSW.elf" "ArduinoTestSW.eep" || exit 0
+		"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objdump.exe" -h -S "ArduinoTestSW.elf" > "ArduinoTestSW.lss"
+		"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-objcopy.exe" -O srec -R .eeprom -R .fuse -R .lock -R .signature -R .user_signatures "ArduinoTestSW.elf" "ArduinoTestSW.srec"
+		"C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-size.exe" "ArduinoTestSW.elf"
+		   text	   data	    bss	    dec	    hex	filename
+		   6860	   1324	    584	   8768	   2240	ArduinoTestSW.elf
+	Done executing task "RunCompilerTask".
+	Task "RunOutputFileVerifyTask"
+				Program Memory Usage 	:	8184 bytes   25.0 % Full
+				Data Memory Usage 		:	1908 bytes   93.2 % Full
+	Done executing task "RunOutputFileVerifyTask".
+Done building target "CoreBuild" in project "ArduinoTestSW.cproj".
+Target "PostBuildEvent" skipped, due to false condition; ('$(PostBuildEvent)' != '') was evaluated as ('' != '').
+Target "Build" in file "C:\Program Files (x86)\Atmel\Studio\7.0\Vs\Avr.common.targets" from project "C:\Users\oliver.clay\OneDrive - The Magstim Company Ltd\Documents\Arduino\src\ArduinoTestSW.cproj" (entry point):
+Done building target "Build" in project "ArduinoTestSW.cproj".
+Done building project "ArduinoTestSW.cproj".
+
+Build succeeded.
+========== Build: 1 succeeded or up-to-date, 0 failed, 0 skipped ==========
