@@ -13,7 +13,7 @@
     <OutputFileExtension>.elf</OutputFileExtension>
     <OutputDirectory>$(MSBuildProjectDirectory)\$(Configuration)</OutputDirectory>
     <AssemblyName>Arduino Iface Test</AssemblyName>
-    <Name>BatMod-I2C-Test</Name>
+    <Name>TJ000004_SW</Name>
     <RootNamespace>Arduino Iface Test</RootNamespace>
     <ToolchainFlavour>Native</ToolchainFlavour>
     <KeepTimersRunning>true</KeepTimersRunning>
