@@ -1,12 +1,10 @@
 /********************************************************************
-*                                                                   *
-*   Filename:   menu.c                                             *
-*   Originator: C.Lewis                                             *
-*   Project:    6489-90 Universal Interface Board Test Jig          *
-*                                                                   *
-*   This module is responsible for the debug menu generation and    *
-*   Functionality                                                   *
-*                                                                   *
+*																	*
+*	Filename:		menu.c											*
+*	Originator:		Chris Lewis										*
+*	Project:		EEG Battery Module TestJig Software				*
+*	Description:													*
+*																	*
 ********************************************************************/
 
 /*==================================================================*/
@@ -169,7 +167,7 @@ void MEN_Init(void)
 {
 	ASC_Asci_msg((int8 *const)ROM_Read_romstr(COPYRIGHT_MSG));	//display Copyright msg
 	ASC_Asci_msg((int8 *const)ROM_Read_romstr(OPENING_MENU_MSG));//display Opening msg
-	sprintf(tmpstr,"%s\n\n\r", ROM_Read_romstr(VER_Get_sw_ver_str()));
+	sprintf((char *)tmpstr,"%s\n\n\r", ROM_Read_romstr(VER_Get_sw_ver_str()));
 	ASC_Asci_msg((int8 *const)tmpstr);//display Opening msg
 	MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu); // Set start menu
 }
@@ -251,7 +249,7 @@ static void Test_msg_func(void)
         ram_ptr = ROM_Read_romdata(MEN_MSG_PTR,len);
         MEN_MSG_PTR += len;                 /* adjust msg ptr */
 
-        ASC_Asci_tx((const int8 *)ram_ptr,len);       /* send 'len' bytes of data */
+        ASC_Asci_tx((int8 *)ram_ptr,len);       /* send 'len' bytes of data */
 
         /* reset msg ptr if NUL char detected */
         if(pgm_read_byte(MEN_MSG_PTR) == 0)         /* check for '\0' char */
@@ -283,7 +281,7 @@ static int8 Cmd_check(int8 echo_stat)
         if(c == '\r')
             ASC_Asci_msg(ROM_Read_romstr(NEWLINE_MSG));
         else
-            ASC_Asci_tx((const int8 *)&c,1);
+            ASC_Asci_tx((int8 *)&c,1);
     }
     /* return RX char */
     return c;
@@ -490,7 +488,7 @@ static void Adc_debug_menu(void)
 		adcvolts = ADC_Get_adc_millivolts(adcval);
 		
 //		sprintf(tmpstr,"CH7 = %f %f %f\r",(double)adcval,(double)CONV_FACTOR, (double)adcvolts);
-		sprintf(tmpstr,"CH7 = %umV    \r",adcvolts);
+		sprintf((char *)tmpstr,"CH7 = %umV    \r",(int16)adcvolts);
 		ASC_Asci_msg(tmpstr);
 	}
 	

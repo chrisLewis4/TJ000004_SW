@@ -1,9 +1,8 @@
-/*$Header$*/
 /********************************************************************
 *																	*
 *	Filename:		main.c											*
 *	Originator:		Chris Lewis										*
-*	Project:		Interface Board I2C Test Software				*
+*	Project:		EEG Battery Module TestJig Software				*
 *	Description:													*
 *																	*
 ********************************************************************/
@@ -52,11 +51,6 @@ Description	:
 --------------------------------------------------------------------*/
 int main(void)
 {
-	int8 c;
-	int8 buf[20];
-	
-	int8 x;
-	
 	initIO();
 	ASC_Init_asci();
 		

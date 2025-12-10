@@ -1,9 +1,8 @@
-/*$Header$*/
 /********************************************************************
 *																	*
 *	Filename:		i2c.c											*
 *	Originator:		Chris Lewis										*
-*	Project:		Interface Board I2C Test Software				*
+*	Project:		EEG Battery Module TestJig Software				*
 *	Description:													*
 *																	*
 ********************************************************************/
@@ -75,17 +74,18 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-void I2C_Write(int8 addr, int8 byte_count,int8 *buf)
+int8 I2C_Write(int8 addr, int8 byte_count,int8 *buf)
 {
-	int8 count;
+	int8 count,tmp;
 	
 	I2C_Start();
 	I2C_Send(I2C_WR_ADDR(addr));
 	
 	for(count = 0; count < byte_count;count++)
 		I2C_Send(buf[count]);
-
+	tmp = TWSR;
 	I2C_Stop();
+	return tmp;
 }
 /*====================================================================
 Name		:
@@ -98,8 +98,8 @@ void I2C_Read(int8 addr, int8 byte_count,int8 *buf)
 	int8 count;
 	
 	I2C_Start();
+
 	I2C_Send(I2C_RD_ADDR(addr));
-	
 	for(count = 0; count < byte_count;count++)
 	{
 		if(count == (byte_count - 1))
@@ -119,11 +119,14 @@ Description	:
 static void I2C_WaitForComplete(void) 
 {
 	int8 volatile tmp;
+	int16 timeout;
 	
-	do 
+	for(timeout = 0; timeout < 0xffff; timeout++)
 	{
 		tmp = TWCR;
-	} while (!(tmp  & (1 <<TWINT))); 
+		if((tmp  & (1 <<TWINT)))
+			break;
+	} 
 	
 /*	loop_until_bit_is_set(TWCR, TWINT);*/
 }

@@ -1,13 +1,12 @@
-/*$Header: romdata.c  Revision:1.0  28 July 2014 15:02:42  cal $*/
 /********************************************************************
 *																	*
 *	Filename:	romdata.c											*
 *	Originator:	Chris Lewis											*
-*	Project:	4535-90 Elate Coil Control SW						*
+*	Project:		EEG Battery Module TestJig Software				*
 *																	*
 *	This module was created as a result of the Elate coil project	*
-*		The ATXMEGA256A3U has Harvard architecture, which has		*
-*	seperate program and data memories. Therefore any constant		*
+*		The ATMEL devices has Harvard architecture, which has		*
+*	separate program and data memories. Therefore any constant		*
 *	string defined in the normal way will automatically use RAM as	*
 *	storage.
 *	To store constant strings directly into the program space, the	*

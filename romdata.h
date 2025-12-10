@@ -1,12 +1,12 @@
-/*$Header: romdata.h  Revision:1.0  28 July 2014 14:59:11  cal $*/
+
 /********************************************************************
 *																	*
 *	Filename:	romdata.h											*
 *	Originator:	C.Lewis												*
-*	Project:	3026 Tesla UI control software						*
+*	Project:		EEG Battery Module TestJig Software				*
 *																	*
 *	Created by Chris Lewis, CAL Design, July 2014					*
-*	to work with ATMEGA645 device									*
+*	to work with ATMEL devices								     	*
 *																	*
 ********************************************************************/
 #if !defined _romdata_H

@@ -1,9 +1,8 @@
-/*$Header$*/
 /********************************************************************
 *																	*
 *	Filename:		asci.c											*
 *	Originator:		Chris Lewis										*
-*	Project:		Interface Board I2C Test Software				*
+*	Project:		EEG Battery Module TestJig Software				*
 *	Description:													*
 *																	*
 ********************************************************************/
