@@ -16,6 +16,7 @@
 #include "i2c.h"
 #include "asci.h"
 #include "menu.h"
+#include "adc.h"
 #include <avr/io.h>
 #include <stdio.h>
 #include <util/delay.h>     
@@ -53,6 +54,7 @@ int main(void)
 {
 	initIO();
 	ASC_Init_asci();
+	ADC_Init();
 		
 // DISPLAY INSTRUCTIONS
 
@@ -105,7 +107,8 @@ void initIO(void)
 	// Set Output ports to default states (OFF)
 	DDRB = (BIT0 | BIT1 | BIT2); // Set INTBAT EXTBAT & PolyFuse Load control
 	PORTB &= ~(BIT0 | BIT1 | BIT2); // Set ops low
-	DDRD = BIT2;	// Set =%V enable as O/P
+//	PORTB |= BIT1; // Set INTBAT on
+	DDRD = BIT2;	// Set =5V enable as O/P
 	PORTD |= BIT2; // Set +5V Control on
 	
 }

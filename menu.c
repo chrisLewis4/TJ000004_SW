@@ -348,7 +348,6 @@ static void Debug_menu(void)
     {
 		case 'A':
 		case 'a':
-			ADC_Init();
 			MEN_Set_cmd_bk_func(ADC_DEBUG_MSG,Adc_debug_menu);
 			break;
 		case 'x':
@@ -478,19 +477,19 @@ Description	:
 
 static void Adc_debug_menu(void)
 {
-	int32 adcval;
-	int8 rx_byte;
-	int32 adcvolts;
-	
-	if(ADC_Get_average(&adcval))
-	{
-		
-		adcvolts = ADC_Get_adc_millivolts(adcval);
-		
-//		sprintf(tmpstr,"CH7 = %f %f %f\r",(double)adcval,(double)CONV_FACTOR, (double)adcvolts);
-		sprintf((char *)tmpstr,"CH7 = %umV    \r",(int16)adcvolts);
-		ASC_Asci_msg(tmpstr);
+	int8 rx_byte,x;
+	int16 adcvolts;
+
+	for(x = 0; x < ADC_CHAN_COUNT;x++)
+	{	
+		if(ADC_Get_average_millivolts(&adcvolts,x))
+		{
+			sprintf((char *)tmpstr,"%d=%05umV ",x, adcvolts);
+			ASC_Asci_msg(tmpstr);
+		}
 	}
+	sprintf((char *)tmpstr,"\r");
+	ASC_Asci_msg(tmpstr);
 	
 
 	rx_byte = Cmd_check(CMD_ECHO);

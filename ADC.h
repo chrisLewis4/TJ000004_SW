@@ -19,6 +19,16 @@
 /*==================================================================*/
 /*						LOCAL MACRO DEFINITIONS						*/
 /*==================================================================*/
+typedef enum _adc_chan_names
+{
+	ADC_EXTBAT,		// 0, ADC chan 1
+	ADC_INTBAT,		// 1, ADC chan 2
+	ADC_POLYFUSE,	// 2, ADC chan 3
+	ADC_VBAT,		// 3, ADC chan 6
+	ADC_3V3,		// 4, ADC chan 7
+	ADC_CHAN_COUNT
+
+}ADC_CHAN_NAMES;
 
 /*==================================================================*/
 /*						LOCAL CONSTANT DEFINITIONS					*/
@@ -32,9 +42,7 @@
 /*==================================================================*/
 void ADC_Shutdown(void);
 void ADC_Init(void);
-int8 ADC_Get_average(int32 *res);
-int16 ADC_Get_adc_millivolts(int16 adcval);
-
+int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_NAMES chan);
 
 /************************************************************************
 *						End of ADC.h									*

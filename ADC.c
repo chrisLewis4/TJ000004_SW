@@ -22,7 +22,13 @@
 Name		:
 Description	:
 ------------------------------------------------------------------------*/
-
+typedef struct _adc_data 
+{
+	int32 volatile sum;
+	int16 volatile avg;
+	int16 volatile sample_count;
+	int8 volatile data_ready;
+}ADC_DATA;
 
 /*==================================================================*/
 /*						LOCAL MACRO DEFINITIONS						*/
@@ -53,23 +59,24 @@ Description	:
 #define ADCCLK_2 0x01
 
 
+
 /*==================================================================*/
 /*						LOCAL CONSTANT DEFINITIONS					*/
 /*==================================================================*/
-#define ADC_AVERAGE_COUNT 0x100L
 #define ADC_SAMPLE_COUNT 0x100L
 
 
 /*==================================================================*/
 /*		LOCAL INITIALISED VARIABLES (initialised to 0 by default)	*/
 /*==================================================================*/
-static int32 adc_sample_cnt;
-static int32 volatile adc_sample_sum;
-static int8 volatile adc_data_ready;
+// define variables for ADC channel data collection
+static int8 const adc_mux_chans[ADC_CHAN_COUNT] = {0x01,0x02,0x03,0x06,0x07};
+//	static int8 const adc_mux_chans[ADC_CHAN_COUNT] = {0x07,0x06};
+static int32 const adc_conv_factor[ADC_CHAN_COUNT] = {ADC_CH1_CONV_FACTOR,ADC_CH2_CONV_FACTOR,ADC_CH3_CONV_FACTOR,ADC_CH6_CONV_FACTOR,ADC_CH7_CONV_FACTOR};	
+//	static int32 const adc_conv_factor[ADC_CHAN_COUNT] = {ADC_CH7_CONV_FACTOR,ADC_CH6_CONV_FACTOR};	
+static ADC_DATA adcdata[ADC_CHAN_COUNT];		
+static int8 volatile cur_adc_mux_ix = 0;			// current mux channel
 
-static int32 adc_avg_cnt;
-static int32 adc_avg_sum;
-static int8 adc_avg_ready;
 /*==================================================================*/
 /* 						LOCAL FUNCTION PROTOTYPES 					*/
 /*==================================================================*/
@@ -87,20 +94,26 @@ Description	:
 --------------------------------------------------------------------*/
 void ADC_Init(void)
 {
-	ADMUX = 0x03;	// Set External VREF, Right Justified, Chan 7
+	int8 x;
+	
+	cur_adc_mux_ix = 0; //reset index for mux chans
+	
+	ADMUX = adc_mux_chans[cur_adc_mux_ix];	// Set External VREF, Right Justified, 1st mux chan
 	ADCSRB = 0;		// Sets free running Mode
 	
 	//initialise ADC result buffer
 
-	adc_sample_cnt = 0;
-	adc_sample_sum = 0;
-	adc_data_ready = FALSE;
-		
-	adc_avg_cnt = 0;
-	adc_avg_sum = 0;
-	adc_avg_ready = FALSE;
+	for(x = 0; x < ADC_CHAN_COUNT; x++)
+	{
+		adcdata[x].sum = 0;
+		adcdata[x].avg = 0;
+		adcdata[x].sample_count = 0;
+		adcdata[x].data_ready = FALSE;
+	}
 
-	ADCSRA = (ADC_ENABLE|ADC_START|ADC_AUTO_TRIG|ADC_INT_ENABLE|ADCCLK_128);
+	// Start ADC conv
+	//ADCSRA = (ADC_ENABLE|ADC_START|ADC_AUTO_TRIG|ADC_INT_ENABLE|ADCCLK_128);
+	ADCSRA = (ADC_ENABLE|ADC_START|ADC_INT_ENABLE|ADCCLK_128);
 }
 /*====================================================================
 Name		:
@@ -119,33 +132,32 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-static int16 adc_res;
-static int32 adc_val;
-
-/*====================================================================
-Name		:
-Parameters	:
-Returns		:
-Description	:
---------------------------------------------------------------------*/
 ISR(ADC_vect)
 {
-	if(adc_sample_cnt & 0x01)
-		DEBUG_HI;
-	else
-		DEBUG_LO;
-		
-//	adc_res = (int16)ADCL & 0xff;
-//	adc_res |= (((int16)ADCH << 8) & 0xff00);
-	adc_res = (int16)ADC;
-	adc_sample_sum += (int32)adc_res;
-	if(++adc_sample_cnt >= ADC_SAMPLE_COUNT)
+	int16 adc_res;
+	int8 cur_chan;
+	
+	adc_res = (int16)ADC;		// get result for current chan
+	cur_chan = cur_adc_mux_ix;	// copy cur chan
+	// now set next conv channel
+	if(++cur_adc_mux_ix >= ADC_CHAN_COUNT)
+		cur_adc_mux_ix = 0;
+
+	//set next mux chan
+	ADMUX = adc_mux_chans[cur_adc_mux_ix];	// Set External VREF, Right Justified, set next mux chan
+	ADCSRA = (ADC_ENABLE|ADC_START|ADC_INT_ENABLE|ADCCLK_128);
+
+	// next mux channel is set so process current adc data
+	adcdata[cur_chan].sum += (int32)adc_res;	// add current data to sum
+	
+	// now see if ready to calc average
+	if(++(adcdata[cur_chan].sample_count) >= ADC_SAMPLE_COUNT)
 	{
-//		adc_val = adc_sample_sum;
-		adc_val = adc_sample_sum >> 8;
-		adc_sample_cnt = 0;
-		adc_sample_sum = 0;
-		adc_data_ready = TRUE;
+		// sample count has expired so get average
+		adcdata[cur_chan].sample_count = 0;
+		adcdata[cur_chan].avg = adcdata[cur_chan].sum / ADC_SAMPLE_COUNT;
+		adcdata[cur_chan].sum = 0;	
+		adcdata[cur_chan].data_ready = TRUE;
 	}
 			
 }
@@ -155,35 +167,19 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-int8 ADC_Get_average(int32 *res)
+int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_NAMES chan)
 {
 	int32 avg_val;
 	
-	if(adc_data_ready)
+	if(adcdata[chan].data_ready)
 	{
-		adc_avg_sum += adc_val;
-		if(++adc_avg_cnt >= ADC_AVERAGE_COUNT)
-		{
-			avg_val = adc_avg_sum >> 8;
-			adc_avg_cnt = 0;
-			adc_avg_sum = 0;
-			*res = avg_val;
-			return TRUE;
-		}
-		
+		*millivolt_res = (int16)(((int32)adcdata[chan].avg * adc_conv_factor[chan]) >> 16);
+		adcdata[chan].data_ready = FALSE;
+		return TRUE;
 	}
 	return FALSE;
 }
-/*====================================================================
-Name		:
-Parameters	:
-Returns		:
-Description	:
---------------------------------------------------------------------*/
-int16 ADC_Get_adc_millivolts(int16 adcval)
-{
-	return (int16)(((int32)adcval * (int32)ADC_CH3_CONV_FACTOR) >> 16);
-}
+
 /*********************************************************************
 *						End of ADC.c								 *
 *********************************************************************/
