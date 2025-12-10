@@ -1,25 +1,19 @@
-/*$Header$*/
 /********************************************************************
 *																	*
-*	Filename:		main.c											*
+*	Filename:		version.c										*
 *	Originator:		Chris Lewis										*
-*	Project:		Interface Board I2C Test Software				*
+*	Project:		EEG Battery Module TestJig Software				*
 *	Description:													*
 *																	*
 ********************************************************************/
- 
+
 /*==================================================================*/
 /*							INCLUDE FILES							*/
 /*==================================================================*/
-
 #include "ATMtypes.h"
-
-#include "i2c.h"
-#include "asci.h"
-#include "menu.h"
-#include <avr/io.h>
-#include <stdio.h>
-#include <util/delay.h>     
+#include "version.h"
+#include "romdata.h"
+#include <avr/pgmspace.h>
 
 /*==================================================================*/
 /*						LOCAL MACRO DEFINITIONS						*/
@@ -27,22 +21,19 @@
 /*==================================================================*/
 /*						LOCAL CONSTANT DEFINITIONS					*/
 /*==================================================================*/
-	
+
+static int8 const FW_PN[] PROGMEM = {"Ver P1.0"};
+
 /*==================================================================*/
 /*		LOCAL INITIALISED VARIABLES (initialised to 0 by default)	*/
 /*==================================================================*/
-int8 tmpstr[TMPSTR_LEN];
 /*==================================================================*/
 /* 						LOCAL FUNCTION PROTOTYPES 					*/
 /*==================================================================*/
 
-void initIO(void);
-
 /*==================================================================*/
 /* 								FUNCTIONS 							*/
 /*==================================================================*/
-static BUT but;
-
 
 /*====================================================================
 Name		:
@@ -50,73 +41,10 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-int main(void)
+int8 const *VER_Get_sw_ver_str(void)
 {
-	int8 c;
-	int8 buf[20];
-	
-	int8 x;
-	
-	initIO();
-	ASC_Init_asci();
-		
-// DISPLAY INSTRUCTIONS
-
-	MEN_Init();
-
-
-	//Enter Endless loop
-	while(1) 
-	{
-		MEN_bkproc();	
-	};
+	return FW_PN;
 }
-/*====================================================================
-Name		:
-Parameters	:
-Returns		:
-Description	:
---------------------------------------------------------------------*/
-BUT MAI_Get_but(void)
-{
-	return but;
-}
-
-/*====================================================================
-Name		:
-Parameters	:
-Returns		:
-Description	:
---------------------------------------------------------------------*/
-void MAI_Set_but(BUT But)
-{
-	but  = But;
-}
-
-
-void initIO(void)
-{
-	DDRD |= BIT7; //Set Port D Bit 7 as Debug port
-	DEBUG_LO;
-	DEBUG_HI;
-	DEBUG_LO;
-	DEBUG_HI;
-	DEBUG_LO;
-	DEBUG_HI;
-	DEBUG_LO;
-// Setup I/Os for TJ00004
-	// Disable ADC digital inputs
-	DIDR0 = (BIT1 | BIT2 | BIT3 );	// Disable digital inputs for ADCD channels used - No need to disable digital pins for CH6 or CH7
-
-	// Set Output ports to default states (OFF)
-	DDRB = (BIT0 | BIT1 | BIT2); // Set INTBAT EXTBAT & PolyFuse Load control
-	PORTB &= ~(BIT0 | BIT1 | BIT2); // Set ops low
-	DDRD = BIT2;	// Set =%V enable as O/P
-	PORTD |= BIT2; // Set +5V Control on
-	
-}
-
-
 /*********************************************************************
-*						End of main.c								 *
+*						End of version.c							 *
 *********************************************************************/

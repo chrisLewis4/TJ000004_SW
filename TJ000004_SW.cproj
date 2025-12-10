@@ -182,6 +182,12 @@
     <Compile Include="romdata.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="version.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="version.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <Import Project="$(AVRSTUDIO_EXE_PATH)\\Vs\\Compiler.targets" />
 </Project>

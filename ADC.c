@@ -1,4 +1,3 @@
-/*$Header$*/
 /********************************************************************
 *																	*
 *	Filename:		ADC.c											*
@@ -28,6 +27,31 @@ Description	:
 /*==================================================================*/
 /*						LOCAL MACRO DEFINITIONS						*/
 /*==================================================================*/
+// Define millivolt conversion factor based on a reference voltage of 4.0V
+// millivolts = (VREF/(ADC Resolution-1)) * 0x10000
+// => (4000/2023) * 65536 = 256250.244
+#define CONV_FACTOR 256250L
+// Now define Channel scaling based on HW gains
+#define ADC_CH1_CONV_FACTOR (CONV_FACTOR * 4)
+#define ADC_CH2_CONV_FACTOR (CONV_FACTOR * 4)
+#define ADC_CH3_CONV_FACTOR (CONV_FACTOR * 2)
+#define ADC_CH6_CONV_FACTOR (CONV_FACTOR * 4) //960937L
+#define ADC_CH7_CONV_FACTOR (CONV_FACTOR * 1)
+
+
+#define ADC_ENABLE BIT7
+#define ADC_START BIT6
+#define ADC_AUTO_TRIG BIT5
+#define ADC_INT_FLAG BIT4
+#define ADC_INT_ENABLE BIT3
+#define ADCCLK_128 0x07
+#define ADCCLK_64 0x06
+#define ADCCLK_32 0x05
+#define ADCCLK_16 0x04
+#define ADCCLK_8 0x03
+#define ADCCLK_4 0x02
+#define ADCCLK_2 0x01
+
 
 /*==================================================================*/
 /*						LOCAL CONSTANT DEFINITIONS					*/
@@ -55,30 +79,15 @@ static int8 adc_avg_ready;
 /* 								FUNCTIONS 							*/
 /*==================================================================*/
 
-
 /*====================================================================
 Name		:
 Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-#define ADC_ENABLE BIT7
-#define ADC_START BIT6
-#define ADC_AUTO_TRIG BIT5
-#define ADC_INT_FLAG BIT4
-#define ADC_INT_ENABLE BIT3
-#define ADCCLK_128 0x07
-#define ADCCLK_64 0x06
-#define ADCCLK_32 0x05
-#define ADCCLK_16 0x04
-#define ADCCLK_8 0x03
-#define ADCCLK_4 0x02
-#define ADCCLK_2 0x01
-
 void ADC_Init(void)
 {
-	ADMUX = 0x07;	// Set External VREF, Right Justified, Chan 7
-	DIDR0 = 0x00;	// No need to disable digital pins for CH7
+	ADMUX = 0x03;	// Set External VREF, Right Justified, Chan 7
 	ADCSRB = 0;		// Sets free running Mode
 	
 	//initialise ADC result buffer
@@ -113,6 +122,12 @@ Description	:
 static int16 adc_res;
 static int32 adc_val;
 
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
 ISR(ADC_vect)
 {
 	if(adc_sample_cnt & 0x01)
@@ -134,6 +149,12 @@ ISR(ADC_vect)
 	}
 			
 }
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
 int8 ADC_Get_average(int32 *res)
 {
 	int32 avg_val;
@@ -152,6 +173,16 @@ int8 ADC_Get_average(int32 *res)
 		
 	}
 	return FALSE;
+}
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+int16 ADC_Get_adc_millivolts(int16 adcval)
+{
+	return (int16)(((int32)adcval * (int32)ADC_CH3_CONV_FACTOR) >> 16);
 }
 /*********************************************************************
 *						End of ADC.c								 *

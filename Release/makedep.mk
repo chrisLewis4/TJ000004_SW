@@ -14,3 +14,5 @@ menu.c
 
 romdata.c
 
+version.c
+

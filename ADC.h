@@ -33,6 +33,7 @@
 void ADC_Shutdown(void);
 void ADC_Init(void);
 int8 ADC_Get_average(int32 *res);
+int16 ADC_Get_adc_millivolts(int16 adcval);
 
 
 /************************************************************************

@@ -20,6 +20,7 @@
 #include "i2c.h"
 #include "adc.h"
 #include "romdata.h"
+#include "version.h"
 #include <stdio.h>
 #include <string.h>
 #include <avr/pgmspace.h>
@@ -93,7 +94,8 @@ int8 const NEWLINE_MSG[] PROGMEM =		{"\n\r"};
  int8 const COPYRIGHT_MSG[]  PROGMEM =	{"\n\n\n\n\n\n\n\n\n\n\n\r(c) Copyright The Magstim Company Ltd. 2025\n\n\r"};
  
  int8 const OPENING_MENU_MSG[] PROGMEM = {"\n\n\rEEG Battery Module - I2C Test Software\n\r"
-                                          "======================================\n\n\r"};
+                                          "======================================\n\r"
+										  "TJ000004 Firmware Id: "};
  /* common menu messages */
  static int8 const CMD_NOT_IMPLEMENTED_MSG[] PROGMEM =	{" Command not implemented\n\r"};
  
@@ -167,6 +169,8 @@ void MEN_Init(void)
 {
 	ASC_Asci_msg((int8 *const)ROM_Read_romstr(COPYRIGHT_MSG));	//display Copyright msg
 	ASC_Asci_msg((int8 *const)ROM_Read_romstr(OPENING_MENU_MSG));//display Opening msg
+	sprintf(tmpstr,"%s\n\n\r", ROM_Read_romstr(VER_Get_sw_ver_str()));
+	ASC_Asci_msg((int8 *const)tmpstr);//display Opening msg
 	MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu); // Set start menu
 }
 
@@ -473,7 +477,7 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-#define CONV_FACTOR 211000L
+
 static void Adc_debug_menu(void)
 {
 	int32 adcval;
@@ -483,7 +487,7 @@ static void Adc_debug_menu(void)
 	if(ADC_Get_average(&adcval))
 	{
 		
-		adcvolts = (adcval * (int32)CONV_FACTOR) >> 16;
+		adcvolts = ADC_Get_adc_millivolts(adcval);
 		
 //		sprintf(tmpstr,"CH7 = %f %f %f\r",(double)adcval,(double)CONV_FACTOR, (double)adcvolts);
 		sprintf(tmpstr,"CH7 = %umV    \r",adcvolts);
