@@ -12,6 +12,8 @@
 #include "ATMtypes.h"
 #include "adc.h"
 #include "asci.h"
+#include "romdata.h"
+#include <avr/pgmspace.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
 
@@ -64,7 +66,12 @@ typedef struct _adc_data
 /*						LOCAL CONSTANT DEFINITIONS					*/
 /*==================================================================*/
 #define ADC_SAMPLE_COUNT 0x100L
-
+int8 CH1_NAME[] =	{"EXTBAT"};
+int8 CH2_NAME[] =	{"INTBAT"};
+int8 CH3_NAME[] =	{"+5V Fused"};
+int8 CH6_NAME[] =	{"VBAT OUT"};
+int8 CH7_NAME[] =	{"3V3 OUT"};
+int8 *chan_names[ADC_CHAN_COUNT] = {CH1_NAME,CH2_NAME,CH3_NAME,CH6_NAME,CH7_NAME};
 
 /*==================================================================*/
 /*		LOCAL INITIALISED VARIABLES (initialised to 0 by default)	*/
@@ -167,7 +174,7 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_NAMES chan)
+int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_ID chan)
 {
 	int32 avg_val;
 	
@@ -179,7 +186,16 @@ int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_NAMES chan)
 	}
 	return FALSE;
 }
-
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+int8* ADC_Get_chan_name(ADC_CHAN_ID chan)
+{
+	return chan_names[chan];
+}
 /*********************************************************************
 *						End of ADC.c								 *
 *********************************************************************/

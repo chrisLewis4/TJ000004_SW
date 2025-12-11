@@ -1,14 +1,5 @@
-
-/********************************************************************
-*																	*
-*	Filename:		ADC.h											*
-*	Originator:		Chris Lewis										*
-*	Project:		EEG Battery Module TestJig Software				*
-*	Description:													*
-*																	*
-********************************************************************/
-#if !defined _ADC_H
-#define _ADC_H
+#if !defined _MAIN_H
+#define _MAIN_H
 
 /*==================================================================*/
 /*							INCLUDE FILES							*/
@@ -19,16 +10,7 @@
 /*==================================================================*/
 /*						LOCAL MACRO DEFINITIONS						*/
 /*==================================================================*/
-typedef enum _adc_chan_id
-{
-	ADC_EXTBAT,		// 0, ADC chan 1
-	ADC_INTBAT,		// 1, ADC chan 2
-	ADC_POLYFUSE,	// 2, ADC chan 3
-	ADC_VBAT,		// 3, ADC chan 6
-	ADC_3V3,		// 4, ADC chan 7
-	ADC_CHAN_COUNT
-
-}ADC_CHAN_ID;
+typedef enum _io_control {EXTBAT_CNTRL,INTBAT_CNTRL,POLYFUSE_CNTRL,LAST_IO_CNTRL} IO_CONTROL;
 
 /*==================================================================*/
 /*						LOCAL CONSTANT DEFINITIONS					*/
@@ -40,12 +22,10 @@ typedef enum _adc_chan_id
 /*==================================================================*/
 /* 						public FUNCTION PROTOTYPES 					*/
 /*==================================================================*/
-void ADC_Shutdown(void);
-void ADC_Init(void);
-int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_ID chan);
-int8* ADC_Get_chan_name(ADC_CHAN_ID chan);
+extern void MAI_Set_control_status(IO_CONTROL cntrl_chan, ONOFF_ENUM stat);
+extern ONOFF_ENUM MAI_Get_control_status(IO_CONTROL cntrl_chan);
 
 /************************************************************************
-*						End of ADC.h									*
+*						End of main.h									*
 ************************************************************************/
 #endif

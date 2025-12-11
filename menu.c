@@ -19,6 +19,7 @@
 #include "adc.h"
 #include "romdata.h"
 #include "version.h"
+#include "main.h"
 #include <stdio.h>
 #include <string.h>
 #include <avr/pgmspace.h>
@@ -32,9 +33,10 @@ static void Start_menu(void);
 static void I2C_menu(void);
 static void Test_menu(void);
 static void Adc_debug_menu(void);
+static void Control_debug_menu(void);
+static void Display_control_status(void);
 
 static void I2C_test(void);
-
 
 static void Test_msg_func(void);
 static int8 Cmd_check(int8);
@@ -83,7 +85,9 @@ static int8 Cmd_check(int8);
 /*==================================================================*/
 /*                      GLOBAL CONSTANT DEFINITIONS                  */
 /*==================================================================*/
-int8 const NEWLINE_MSG[] PROGMEM =		{"\n\r"};
+int8 const NEWLINE_MSG[] PROGMEM =	{"\n\r"};
+int8 const ON_MSG[] PROGMEM =		{"ON"};
+int8 const OFF_MSG[] PROGMEM =		{"OFF"};
 	
 /*==================================================================*/
 /*                      LOCAL CONSTANT DEFINITIONS                  */
@@ -123,6 +127,7 @@ int8 const DEBUG_MENU_MSG[] PROGMEM =
 	"DEBUG MENU\n\r"
 	"=============\n\r"
 	"A - ADC test\n\r"
+	"C - I/O Control test\n\r"
 	"X - Exit to Start Menu\n\r"
 };
 
@@ -141,6 +146,22 @@ int8 const ADC_DEBUG_MSG[] PROGMEM =
 {
 	"\n\n\n\n\rADC Debug"
 	"\n\r=========\n\n\r"
+	"\n\rPress X to exit\n\n\r"
+	"\n\r     All Data in millivolts\n\r"
+	"\n\r  EXT   INT   +5V   OUT   3V3\n\r"
+};
+int8 const CONTROL_DEBUG_MSG[] PROGMEM =
+{
+	"\n\n\n\n\rI/O Control Debug Menu"
+	"\n\r======================\n\n\r"
+	"Current Status:\n\r"
+};	
+
+int8 const CONTROL_DEBUG_MENU_MSG[] PROGMEM =
+{
+	"\n\rE - Toggle EXTBAT status\n\r"
+	"I - Toggle INTBAT status\n\r"
+	"P - Toggle Polyfuse Load sttatusINTBAT status\n\r"
 	"\n\rPress X to exit\n\n\r"
 };
 
@@ -350,6 +371,10 @@ static void Debug_menu(void)
 		case 'a':
 			MEN_Set_cmd_bk_func(ADC_DEBUG_MSG,Adc_debug_menu);
 			break;
+		case 'C':
+		case 'c':
+			MEN_Set_cmd_bk_func(CONTROL_DEBUG_MSG,Display_control_status);
+			break;
 		case 'x':
 		case 'X':
 			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
@@ -359,6 +384,96 @@ static void Debug_menu(void)
 			MEN_Set_cmd_bk_func(DEBUG_MENU_MSG,Debug_menu);
 		    break;
     }
+}
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+static void Display_control_status(void)
+{
+	int8 *msg;
+	
+	if(MAI_Get_control_status(EXTBAT_CNTRL) == ON)
+		msg = ROM_Read_romstr(ON_MSG);
+	else
+		msg = ROM_Read_romstr(OFF_MSG);
+	sprintf(tmpstr,"EXTBAT = %s\n\r",msg);
+	ASC_Asci_msg(tmpstr);
+	
+	if(MAI_Get_control_status(INTBAT_CNTRL) == ON)
+		msg = ROM_Read_romstr(ON_MSG);
+	else
+		msg = ROM_Read_romstr(OFF_MSG);
+	sprintf(tmpstr,"INTBAT = %s\n\r",msg);
+	ASC_Asci_msg(tmpstr);
+	
+	if(MAI_Get_control_status(POLYFUSE_CNTRL) == ON)
+		msg = ROM_Read_romstr(ON_MSG);
+	else
+		msg = ROM_Read_romstr(OFF_MSG);
+	sprintf(tmpstr,"POLYFUSE LOAD = %s\n\r",msg);
+	ASC_Asci_msg(tmpstr);
+	
+	MEN_Set_cmd_bk_func(CONTROL_DEBUG_MENU_MSG,Control_debug_menu);
+
+}
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+static void Control_debug_menu(void)
+{
+	int8 rx_byte;
+	ONOFF_ENUM stat;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'E':
+		case 'e':
+			if(MAI_Get_control_status(EXTBAT_CNTRL) == ON)
+				stat = OFF;
+			else
+				stat = ON;
+			MAI_Set_control_status(EXTBAT_CNTRL,stat);
+			break;
+		case 'I':
+		case 'i':
+			if(MAI_Get_control_status(INTBAT_CNTRL) == ON)
+				stat = OFF;
+			else
+				stat = ON;
+			MAI_Set_control_status(INTBAT_CNTRL,stat);
+			break;
+		case 'P':
+		case 'p':
+			if(MAI_Get_control_status(POLYFUSE_CNTRL) == ON)
+				stat = OFF;
+			else
+				stat = ON;
+			MAI_Set_control_status(POLYFUSE_CNTRL,stat);
+			break;
+		case 'X':
+		case 'x':
+			MEN_Set_cmd_bk_func(DEBUG_MENU_MSG,Debug_menu);
+			return;
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			break;
+	}
+	MEN_Set_cmd_bk_func(CONTROL_DEBUG_MSG,Display_control_status);
+
 }
 /*====================================================================
 Name		:
@@ -477,15 +592,18 @@ Description	:
 
 static void Adc_debug_menu(void)
 {
-	int8 rx_byte,x;
+	int8 rx_byte,x,*chan_name;
 	int16 adcvolts;
 
 	for(x = 0; x < ADC_CHAN_COUNT;x++)
 	{	
 		if(ADC_Get_average_millivolts(&adcvolts,x))
 		{
-			sprintf((char *)tmpstr,"%d=%05umV ",x, adcvolts);
+//			chan_name = ADC_Get_chan_name(x);
+//			sprintf((char *)tmpstr,"%d=%05umV ",x, adcvolts);
+			sprintf((char *)tmpstr," %05u", adcvolts);
 			ASC_Asci_msg(tmpstr);
+			while(!ASC_Asci_tx_empty());
 		}
 	}
 	sprintf((char *)tmpstr,"\r");
@@ -495,14 +613,14 @@ static void Adc_debug_menu(void)
 	rx_byte = Cmd_check(CMD_ECHO);
 	/* return if none available */
 	if(!rx_byte)
-	return;
+		return;
 
 	/* now process RX char */
 	switch(rx_byte)
 	{
 		case 'x':
 		case 'X':
-			ADC_Shutdown();
+//			ADC_Shutdown();
 			MEN_Set_cmd_bk_func(DEBUG_MENU_MSG,Debug_menu);
 			break;
 	}

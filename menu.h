@@ -26,6 +26,9 @@ extern int8 const HARDWARE_ID_MSG[];
 extern int8 const NEWLINE_MSG[];
 extern int8 const DEBUG_MENU_MSG[];
 extern int8 const START_MENU_MSG[];
+extern int8 const ON_MSG[];
+extern int8 const OFF_MSG[];
+
 
 /*======================================================================*/
 /*                      PUBLIC FUNCTION PROTOTYPES                      */
