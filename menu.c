@@ -46,6 +46,7 @@ static void Connect_j8_menu(void);
 static void Check_intbat(void);
 static void Check_5v(void);
 static void Check_threshold1_menu(void);
+static void Check_threshold2_menu(void);
 
 
 
@@ -75,7 +76,10 @@ static void Set_retry_func( void * const next_cmd_ptr);
 #define _3V3_LIIMIT 150		//150mV tolerance
 #define _5V_VOLTAGE 5000	// 5000mV nominal
 #define _5V_LIIMIT 200		//200mV tolerance
-
+#define VBAT_TRACKING_LIMIT 100 
+#define LOWER_SWITCH_THESH 11200
+#define UPPER_SWITCH_THESH 13000
+#define SWITCH_THESH_TOL 300
 
 
 #define STM_I2C_ADDR 0x10
@@ -184,13 +188,29 @@ int8 const POLYFUSE_VOLTAGE_ERR_MSG[] PROGMEM =
 
 int8 const CHECK_THRESHOLD1_MSG[] PROGMEM =
 {
-	"\n\rSlowly Reduce the the EXTBAT voltage until Message appears\n\r"
+	"\n\rSlowly Decrease the the EXTBAT voltage until a Message appears\n\r"
 	"Press 'X' to exit or ENTER to proceed\n\n\r"
+	"  EXTBAT  VBAT    INTBAT\n\r"
+};
+int8 const CHECK_THRESHOLD2_MSG[] PROGMEM =
+{
+	"\n\rSlowly Icrease the the EXTBAT voltage until a Message appears\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+	"  EXTBAT  VBAT    INTBAT\n\r"
 };
 
 int8 const RETRY_OR_EXIT_MSG[] PROGMEM =
 {
 	"\n\rPress 'X' to exit or ENTER to Retry\n\r"
+};
+
+int8 const LOWER_THRESHOLD_ERROR_MSG1[] PROGMEM =
+{
+	"\n\n\r*** LOWER SWITCHING THRESHOLD ERROR 1***\n\n\r"
+};
+int8 const LOWER_THRESHOLD_ERROR_MSG2[] PROGMEM =
+{
+	"\n\n\r*** LOWER SWITCHING THRESHOLD ERROR 2***\n\n\r"
 };
 
 
@@ -320,11 +340,25 @@ void MEN_Set_cmd_bk_func(const int8  *MSG_PTR, void * const next_cmd_ptr)
     cmd_bk_func = Test_msg_func;
 }
 
+/*====================================================================
+Name        :MEN_Set_cmd_bk_func
+Parameters  :msg to display, next cmd func to execute
+Returns     :NONE
+Description :Loads the passed vars to local vars and sets the cmd func to display
+             the passed message and set the passed cmd func
+--------------------------------------------------------------------*/
 void Set_retry_func( void * const next_cmd_ptr)
 {
 	retry_cmd_func = next_cmd_ptr;
 	MEN_Set_cmd_bk_func(RETRY_OR_EXIT_MSG,Retry_or_exit_menu);
 }
+/*====================================================================
+Name        :MEN_Set_cmd_bk_func
+Parameters  :msg to display, next cmd func to execute
+Returns     :NONE
+Description :Loads the passed vars to local vars and sets the cmd func to display
+             the passed message and set the passed cmd func
+--------------------------------------------------------------------*/
 void Retry_or_exit_menu(void)
 {
 	int8 rx_byte;
@@ -584,9 +618,15 @@ Description	:
 static void Check_extbat(void)
 {
 	CHAN_AVERAGE *ca;
+	VOLTAGE_LIMITS vbat;
 	
+	vbat.nominal = extbat_lims.nominal;
+	vbat.limit = 200;
+	
+	MAI_Set_control_status(INTBAT_CNTRL,OFF); // Turn oFF INTBAT supply to BUT
+	TIM_Wait(250);	// set 0.5s delay
 	MAI_Set_control_status(EXTBAT_CNTRL,ON); // Turn on EXTBAT supply to BUT
-	TIM_Wait(500);	// set 0.5s delay
+	TIM_Wait(250);	// set 0.5s delay
 	if(!Check_chan_voltages(ADC_EXTBAT,&extbat_lims))
 	{
 		ASC_Asci_msg((int8 *const)ROM_Read_romstr(ADJUST_VOLTAGE_MSG));
@@ -597,7 +637,10 @@ static void Check_extbat(void)
 	{
 		if(Check_chan_voltages(ADC_3V3,&_3v3_lims))
 		{
-			MEN_Set_cmd_bk_func(NULL,Check_intbat);
+			if(Check_chan_voltages(ADC_VBAT,&vbat))
+				MEN_Set_cmd_bk_func(NULL,Check_intbat);
+			else
+				Set_retry_func(Check_extbat);
 		}
 		else
 		{
@@ -617,9 +660,15 @@ Description	:
 static void Check_intbat(void)
 {
 	CHAN_AVERAGE *ca;
+	VOLTAGE_LIMITS vbat;
 	
-	MAI_Set_control_status(INTBAT_CNTRL,ON); // Turn on EXTBAT supply to BUT
-	TIM_Wait(500);	// set 0.5s delay
+	vbat.nominal = intbat_lims.nominal;
+	vbat.limit = 200;
+	
+	MAI_Set_control_status(EXTBAT_CNTRL,OFF); // Turn off EXTBAT supply to BUT
+	TIM_Wait(250);	// set 0.5s delay
+	MAI_Set_control_status(INTBAT_CNTRL,ON); // Turn on INTBAT supply to BUT
+	TIM_Wait(250);	// set 0.5s delay
 	if(!Check_chan_voltages(ADC_INTBAT,&intbat_lims))
 	{
 		ASC_Asci_msg((int8 *const)ROM_Read_romstr(ADJUST_VOLTAGE_MSG));
@@ -630,7 +679,10 @@ static void Check_intbat(void)
 	{
 		if(Check_chan_voltages(ADC_3V3,&_3v3_lims))
 		{
-			MEN_Set_cmd_bk_func(CONNECT_J8_MSG,Connect_j8_menu);
+			if(Check_chan_voltages(ADC_VBAT,&vbat))
+				MEN_Set_cmd_bk_func(CONNECT_J8_MSG,Connect_j8_menu);
+			else
+				Set_retry_func(Check_intbat);
 		}
 		else
 		{
@@ -696,7 +748,15 @@ static void Check_5v(void)
 	else
 	{
 		if(Check_chan_voltages(ADC_3V3,&_3v3_lims))
+		{
 			MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_threshold1_menu);
+			MAI_Set_control_status(EXTBAT_CNTRL,ON); // Turn on EXTBAT supply to BUT
+			TIM_Wait(250);
+			MAI_Set_control_status(INTBAT_CNTRL,ON); // Turn on INTBAT supply to BUT
+			TIM_Wait(250);
+			return;
+			
+		}
 		else
 			Set_retry_func(Check_5v);
 	}
@@ -712,6 +772,7 @@ Description	:
 static void Check_threshold1_menu(void)
 {
 	int8 rx_byte;
+	int16 extbat,intbat,vbat;
 
 	//	ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWLINE_MSG));
 
@@ -719,7 +780,49 @@ static void Check_threshold1_menu(void)
 	rx_byte = Cmd_check(CMD_ECHO);
 	/* return if none available */
 	if(!rx_byte)
-	return;
+	{
+		while(!ADC_Get_average_millivolts(&extbat,ADC_EXTBAT));
+		while(!ADC_Get_average_millivolts(&intbat,ADC_INTBAT));
+		while(!ADC_Get_average_millivolts(&vbat,ADC_VBAT));
+		sprintf(tmpstr,"  %05u   %05u   %05u\r",extbat,vbat,intbat);
+		ASC_Asci_msg(tmpstr);
+		
+		// check if we are tracking extbat
+		if(vbat >= (extbat - VBAT_TRACKING_LIMIT) && vbat <= (extbat + VBAT_TRACKING_LIMIT))
+		{
+			// we are still tracking - Check if we should have switched
+			if(vbat < (LOWER_SWITCH_THESH - SWITCH_THESH_TOL))
+			{
+				//Display error
+				ASC_Asci_msg((int8 *const)ROM_Read_romstr(LOWER_THRESHOLD_ERROR_MSG1));
+				Set_retry_func(Check_threshold1_menu);
+			}
+			return;
+		}
+		// we are no longer tracking extbat so check if we are now tracking intbat
+		else if(vbat >= (intbat - VBAT_TRACKING_LIMIT) && vbat <= (intbat + VBAT_TRACKING_LIMIT))
+		{
+			// we are tracking intbat so check threshold is in tolerance
+			if(extbat > (LOWER_SWITCH_THESH - SWITCH_THESH_TOL) && extbat < (LOWER_SWITCH_THESH + SWITCH_THESH_TOL))
+			{
+				// in tolerance so display result
+				sprintf(tmpstr, "\n\n\rThreshold OK @ %umV\n\r",extbat);
+				ASC_Asci_msg(tmpstr);
+				MEN_Set_cmd_bk_func(CHECK_THRESHOLD2_MSG,Check_threshold2_menu);
+			}
+			else
+			{
+				//Display error
+				ASC_Asci_msg((int8 *const)ROM_Read_romstr(LOWER_THRESHOLD_ERROR_MSG2));
+				sprintf(tmpstr, "\n\rE= %05u V= %05u I = %05u\n\r",extbat,vbat,intbat);
+				while(!ASC_Asci_tx_empty());
+				ASC_Asci_msg(tmpstr);
+				Set_retry_func(Check_threshold1_menu);
+			}
+			
+		}
+		return;
+	}
 
 	/* now process RX char */
 	switch(rx_byte)
@@ -727,12 +830,7 @@ static void Check_threshold1_menu(void)
 		case 'x':
 		case 'X':
 			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
-		break;
-		case '\r':
-		case '\n':
-			ASC_Asci_msg("\n\n\r READY for Theshold Stuff\n\n\r");
-			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
-		break;
+			break;
 		default:
 			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
 			MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_threshold1_menu);
@@ -741,6 +839,13 @@ static void Check_threshold1_menu(void)
 	
 		
 }
+static void Check_threshold2_menu(void)
+{
+	ASC_Asci_msg("\n\r Now do Upper threshold stuff\n\r");
+	MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+	
+}
+
 /*====================================================================
 Name		:
 Parameters	:
