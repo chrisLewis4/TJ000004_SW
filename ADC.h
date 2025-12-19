@@ -30,6 +30,14 @@ typedef enum _adc_chan_id
 
 }ADC_CHAN_ID;
 
+typedef struct _chan_average
+{
+	int16 max;
+	int16 min;
+	int16 avg;
+	int32 sum;
+	int8 cnt;
+}CHAN_AVERAGE;
 /*==================================================================*/
 /*						LOCAL CONSTANT DEFINITIONS					*/
 /*==================================================================*/
@@ -44,6 +52,8 @@ void ADC_Shutdown(void);
 void ADC_Init(void);
 int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_ID chan);
 int8* ADC_Get_chan_name(ADC_CHAN_ID chan);
+CHAN_AVERAGE *ADC_Get_chan_average(ADC_CHAN_ID chan,int8 avg_size);
+
 
 /************************************************************************
 *						End of ADC.h									*

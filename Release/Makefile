@@ -43,6 +43,7 @@ C_SRCS +=  \
 ../main.c \
 ../menu.c \
 ../romdata.c \
+../Timer.c \
 ../version.c
 
 
@@ -59,6 +60,7 @@ i2c.o \
 main.o \
 menu.o \
 romdata.o \
+Timer.o \
 version.o
 
 OBJS_AS_ARGS +=  \
@@ -68,6 +70,7 @@ i2c.o \
 main.o \
 menu.o \
 romdata.o \
+Timer.o \
 version.o
 
 C_DEPS +=  \
@@ -77,6 +80,7 @@ i2c.d \
 main.d \
 menu.d \
 romdata.d \
+Timer.d \
 version.d
 
 C_DEPS_AS_ARGS +=  \
@@ -86,6 +90,7 @@ i2c.d \
 main.d \
 menu.d \
 romdata.d \
+Timer.d \
 version.d
 
 OUTPUT_FILE_PATH +=TJ000004_SW.elf
@@ -138,6 +143,13 @@ LINKER_SCRIPT_DEP+=
 	
 
 ./romdata.o: .././romdata.c
+	@echo Building file: $<
+	@echo Invoking: AVR/GNU C Compiler : 5.4.0
+	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -funsigned-char -funsigned-bitfields -DNDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.1.130\include" -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.7.374\include"  -Os -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -Wall -Wextra -mmcu=atmega328p -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.7.374\gcc\dev\atmega328p" -c -std=gnu99 -v -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 
+	@echo Finished building: $<
+	
+
+./Timer.o: .././Timer.c
 	@echo Building file: $<
 	@echo Invoking: AVR/GNU C Compiler : 5.4.0
 	$(QUOTE)C:\Program Files (x86)\Atmel\Studio\7.0\toolchain\avr8\avr8-gnu-toolchain\bin\avr-gcc.exe$(QUOTE)  -x c -funsigned-char -funsigned-bitfields -DNDEBUG  -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.1.130\include" -I"C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.7.374\include"  -Os -ffunction-sections -fdata-sections -fpack-struct -fshort-enums -Wall -Wextra -mmcu=atmega328p -B "C:\Program Files (x86)\Atmel\Studio\7.0\Packs\atmel\ATmega_DFP\1.7.374\gcc\dev\atmega328p" -c -std=gnu99 -v -MD -MP -MF "$(@:%.o=%.d)" -MT"$(@:%.o=%.d)" -MT"$(@:%.o=%.o)"   -o "$@" "$<" 

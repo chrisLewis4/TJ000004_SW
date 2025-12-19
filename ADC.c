@@ -68,7 +68,7 @@ typedef struct _adc_data
 #define ADC_SAMPLE_COUNT 0x100L
 int8 CH1_NAME[] =	{"EXTBAT"};
 int8 CH2_NAME[] =	{"INTBAT"};
-int8 CH3_NAME[] =	{"+5V Fused"};
+int8 CH3_NAME[] =	{"+5V IN"};
 int8 CH6_NAME[] =	{"VBAT OUT"};
 int8 CH7_NAME[] =	{"3V3 OUT"};
 int8 *chan_names[ADC_CHAN_COUNT] = {CH1_NAME,CH2_NAME,CH3_NAME,CH6_NAME,CH7_NAME};
@@ -83,7 +83,7 @@ static int32 const adc_conv_factor[ADC_CHAN_COUNT] = {ADC_CH1_CONV_FACTOR,ADC_CH
 //	static int32 const adc_conv_factor[ADC_CHAN_COUNT] = {ADC_CH7_CONV_FACTOR,ADC_CH6_CONV_FACTOR};	
 static ADC_DATA adcdata[ADC_CHAN_COUNT];		
 static int8 volatile cur_adc_mux_ix = 0;			// current mux channel
-
+static CHAN_AVERAGE cur_avg;
 /*==================================================================*/
 /* 						LOCAL FUNCTION PROTOTYPES 					*/
 /*==================================================================*/
@@ -176,8 +176,6 @@ Description	:
 --------------------------------------------------------------------*/
 int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_ID chan)
 {
-	int32 avg_val;
-	
 	if(adcdata[chan].data_ready)
 	{
 		*millivolt_res = (int16)(((int32)adcdata[chan].avg * adc_conv_factor[chan]) >> 16);
@@ -195,6 +193,37 @@ Description	:
 int8* ADC_Get_chan_name(ADC_CHAN_ID chan)
 {
 	return chan_names[chan];
+}
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+CHAN_AVERAGE *ADC_Get_chan_average(ADC_CHAN_ID chan,int8 avg_size)
+{
+	int16 avg;
+	// initialise average struct
+	cur_avg.max = 0;
+	cur_avg.min = 0xffff;
+	cur_avg.avg = 0;
+	cur_avg.sum = 0;
+	
+	for(cur_avg.cnt = 0; cur_avg.cnt < avg_size;cur_avg.cnt++)
+	{
+		// wait for averagee to complete
+		while(!ADC_Get_average_millivolts(&avg,chan));
+		
+		if(avg < cur_avg.min)
+			cur_avg.min = avg;
+		if(avg > cur_avg.max)
+			cur_avg.max = avg;
+		cur_avg.sum += (int32)avg;
+	}
+	// avg_size samples have been summed so calc average
+	cur_avg.avg = (int16)(cur_avg.sum/(int32)avg_size);
+	return &cur_avg;
+	
 }
 /*********************************************************************
 *						End of ADC.c								 *

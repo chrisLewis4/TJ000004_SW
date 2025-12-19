@@ -16,6 +16,7 @@
 #include "asci.h"
 #include "menu.h"
 #include "main.h"
+#include "Timer.h"
 #include "adc.h"
 #include <avr/io.h>
 #include <stdio.h>
@@ -61,6 +62,7 @@ Description	:
 int main(void)
 {
 	initIO();
+	TIM_Init_timer();
 	ASC_Init_asci();
 	ADC_Init();
 		
@@ -132,16 +134,19 @@ ONOFF_ENUM MAI_Get_control_status(IO_CONTROL cntrl_chan)
 				return ON;
 			else
 				return OFF;
+			break;
 		case INTBAT_CNTRL:
 			if(stat & INTBAT_CNTRL_BIT)
 				return ON;
 			else
 				return OFF;
+			break;
 		case POLYFUSE_CNTRL:
 			if(stat & POLYFUSE_CNTRL_BIT)
 				return ON;
 			else
 				return OFF;
+			break;
 		
 	}
 }

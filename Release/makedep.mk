@@ -14,5 +14,7 @@ menu.c
 
 romdata.c
 
+Timer.c
+
 version.c
 
