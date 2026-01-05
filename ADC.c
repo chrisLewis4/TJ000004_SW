@@ -38,7 +38,8 @@ typedef struct _adc_data
 // Define millivolt conversion factor based on a reference voltage of 4.0V
 // millivolts = (VREF/(ADC Resolution-1)) * 0x10000
 // => (4000/2023) * 65536 = 256250.244
-#define CONV_FACTOR 256250L
+//#define CONV_FACTOR 256250L
+#define CONV_FACTOR 128125L
 // Now define Channel scaling based on HW gains
 #define ADC_CH1_CONV_FACTOR (CONV_FACTOR * 4)
 #define ADC_CH2_CONV_FACTOR (CONV_FACTOR * 4)
@@ -65,7 +66,8 @@ typedef struct _adc_data
 /*==================================================================*/
 /*						LOCAL CONSTANT DEFINITIONS					*/
 /*==================================================================*/
-#define ADC_SAMPLE_COUNT 0x100L
+//#define ADC_SAMPLE_COUNT 0x100L
+#define ADC_SAMPLE_COUNT 0x80L
 int8 CH1_NAME[] =	{"EXTBAT"};
 int8 CH2_NAME[] =	{"INTBAT"};
 int8 CH3_NAME[] =	{"+5V IN"};
@@ -178,7 +180,7 @@ int8 ADC_Get_average_millivolts(int16 *millivolt_res, ADC_CHAN_ID chan)
 {
 	if(adcdata[chan].data_ready)
 	{
-		*millivolt_res = (int16)(((int32)adcdata[chan].avg * adc_conv_factor[chan]) >> 16);
+		*millivolt_res = (int16)(((int32)adcdata[chan].avg * adc_conv_factor[chan]) >> 15);
 		adcdata[chan].data_ready = FALSE;
 		return TRUE;
 	}
