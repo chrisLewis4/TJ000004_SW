@@ -65,7 +65,8 @@ int main(void)
 	TIM_Init_timer();
 	ASC_Init_asci();
 	ADC_Init();
-		
+	I2C_Init();		// initialise I²C
+	
 // DISPLAY INSTRUCTIONS
 
 	MEN_Init();
@@ -147,6 +148,8 @@ ONOFF_ENUM MAI_Get_control_status(IO_CONTROL cntrl_chan)
 			else
 				return OFF;
 			break;
+		default:
+			return OFF;
 		
 	}
 }
@@ -178,6 +181,8 @@ void MAI_Set_control_status(IO_CONTROL cntrl_chan, ONOFF_ENUM stat)
 			else
 				IO_CNTRL_PORT_WR &= ~POLYFUSE_CNTRL_BIT;
 			break;
+		default:
+			return;
 	}
 }
 

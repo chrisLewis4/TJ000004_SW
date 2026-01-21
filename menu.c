@@ -42,25 +42,37 @@ static void Start_menu(void);
 static void Test_menu(void);
 static void Check_extbat(void);
 static int8 Check_chan_voltages(ADC_CHAN_ID chan,VOLTAGE_LIMITS *vlim);
-static void Connect_j8_menu(void);
+static void Switch_5v_on_menu(void);
 static void Check_intbat(void);
 static void Check_5v(void);
-static void Check_threshold1_menu(void);
-static void Check_threshold2_menu(void);
+static void Check_lower_threshold_menu(void);
+static void Check_upper_threshold_menu(void);
 static void Display_tracking_voltages(int16 *extbat_ptr, int16 *intbat_ptr, int16 *vbat_ptr);
 
+static void Prog_slave_menu(void);
+static void Slave_display_menu(void);
+static void Slave_display_menu2(void);
+static void Prog_master_menu(void);
+static void Prog_master_menu2(void);
+static void Base_iface_menu(void);
+static void Base_iface_menu2(void);
+static void Polyfuse_test_menu(void);
+static void Polyfuse_test(void);
+static void Test_done(void);
 
 
 
 static void Debug_menu(void);
-static void I2C_menu(void);
+static void I2C_Debug_menu(void);
 static void Adc_debug_menu(void);
 static void Control_debug_menu(void);
 static void Display_control_status(void);
 static void Adc_display_values(void);
+static void Set_verif_thresh_menu(void);
+static void Display_current_thresholds(void);
 
 
-static void I2C_test(void);
+//static void I2C_test(void);
 
 static void Test_msg_func(void);
 static int8 Cmd_check(int8);
@@ -70,23 +82,37 @@ static void Set_retry_func( void * const next_cmd_ptr);
 /*==================================================================*/
 /*                      LOCAL MACRO DEFINITIONS                     */
 /*==================================================================*/
-#define EXTBAT_VOLTAGE 14000	// 14000mV nominal
-#define EXTBAT_LIIMIT 200		//100mV tolerance
-#define INTBAT_VOLTAGE 15000	// 15000mV nominal
-#define INTBAT_LIIMIT 200		//100mV tolerance
-#define _3V3_VOLTAGE 3300	// 3300 nominal
-#define _3V3_LIIMIT 150		//150mV tolerance
-#define _5V_VOLTAGE 5000	// 5000mV nominal
-#define _5V_LIIMIT 200		//200mV tolerance
-#define VBAT_TRACKING_LIMIT 200 
-#define LOWER_SWITCH_THESH 11200
-#define UPPER_SWITCH_THRESH 13000
-#define SWITCH_THRESH_TOL 400
+// *** Test Voltage Limits and Tolerances **
+#define EXTBAT_VOLTAGE 14000		// 14.0V nominal
+#define EXTBAT_LIIMIT 100			// ± 200mV tolerance
+#define INTBAT_VOLTAGE 15000		// 15.0V nominal
+#define INTBAT_LIIMIT 100			// ± 200mV tolerance
+#define _3V3_VOLTAGE 3300			// 3.3V nominal
+#define _3V3_LIIMIT 150				// ± 150mV tolerance
+#define _5V_VOLTAGE 5000			// 5.0V nominal
+#define _5V_LIIMIT 150				// ± 200mV tolerance
+#define VBAT_TRACKING_LIMIT 150		// ± 200mV tolerance
 
+#define LOWER_SWITCH_THRESH		11200	// 11.2V Nominal
+#define UPPER_SWITCH_THRESH		13000	// 23.0V Nominal
+#define LOWER_THRESH_VERIF_HIGH	12000	// 11.6V for verification
+#define LOWER_THRESH_VERIF_LOW	10400	// 110.8V for verification
+#define UPPER_THRESH_VERIF_HIGH 13800	// 13.4V for verification
+#define UPPER_THRESH_VERIF_LOW	12200	// 12.6V for verification
 
-#define STM_I2C_ADDR 0x10
-#define DISPLAY_AMP_ERROR_CODE 0x11
+#define SWITCH_THRESH_TOL 400		// ± 400mV tolerance
+#define POLYFUSE_TRIP_THRESHOLD		1500// 1.5V trip threshold
+#define POLYFUSE_TRIP_THRESH_VERIF	100// 0.1V trip threshold for verification
+#define POLYFUSE_TRIP_TIME 3		// define trip time is seconds
 
+// I²C Definitions
+#define STM_I2C_ADDR				0x10 // Master interface address
+#define DISPLAY_AMP_ERROR_CODE		0x11 // Code to display error code on Master display
+#define AMP_ERROR_CODE_MSB			0xff // MSB of error code (always 0xff)
+#define AMP_ERROR_CODE_BLUE_LSB		0xff // LSB of error code to set BLUE LED ON (0xffff)
+#define AMP_ERROR_CODE_GREEN_LSB	0xfe // LSB of error code to set GREEN LED ON (0xfffe)
+#define AMP_ERROR_CODE_RED_LSB		0xfd // LSB of error code to set RED LED ON (0xfffd)
+#define DISPLAY_AMP_NO_ERROR_CODE	0x00
 
 /* definition used to echo the terminal keys pressed */
 #define CMD_ECHO        TRUE
@@ -118,6 +144,7 @@ static void Set_retry_func( void * const next_cmd_ptr);
 
 #define DELAY_COUNT 1000
 
+#define BELL '\x7'
 /*==================================================================*/
 /*                      GLOBAL CONSTANT DEFINITIONS                  */
 /*==================================================================*/
@@ -155,8 +182,8 @@ int8 const TEST_MENU_MSG[] PROGMEM =
 	"\n\n\n\n\r"
 	"Board Test\n\r"
 	"==========\n\r"
-	"Ensure the EXTBAT PSU is set to 14.0V ±0.1V\n\r"
-	"Ensure the INTBAT PSU is set to 15.0V ±0.1V\n\r"
+	"Ensure the EXTBAT PSU is set to 14.0V +/- 0.1V\n\r"
+	"Ensure the INTBAT PSU is set to 15.0V +/- 0.1V\n\r"
 	"Connect the Board Under Test (BUT) to the Jig\n\r"
 	"\n*** Ensure the +5V Power Switch is OFF at this stage ***\n\n\r"
 	"Turn the External PSUs ON\n\r"
@@ -176,27 +203,27 @@ int8 const ADJUST_VOLTAGE_MSG[] PROGMEM =
 	"\n\r*** Adjust Input Voltage ***\n\r"
 };
 
-int8 const CONNECT_J8_MSG[] PROGMEM =
+int8 const SWICTH_5V_ON_MSG[] PROGMEM =
 {
 	"\n\r*** TURN THE +5V POWER SWITCH ON ***\n\r"
 	"Press 'X' to exit or ENTER to proceed\n\n\r"
 };
 
 
-int8 const POLYFUSE_VOLTAGE_ERR_MSG[] PROGMEM =
+/*int8 const POLYFUSE_VOLTAGE_ERR_MSG[] PROGMEM =
 {
 	"\n\n\r*** +5V Out of tolerance ***\n\n\r"
-};
+};*/
 
 int8 const CHECK_THRESHOLD1_MSG[] PROGMEM =
 {
-	"\n\rSlowly Decrease the the EXTBAT voltage until a Message appears\n\r"
+	"\n\rSlowly Decrease the EXTBAT voltage until a Message appears\n\r"
 	"Press 'X' to exit or ENTER to proceed\n\n\r"
 	"  EXTBAT  VBAT    INTBAT\n\r"
 };
 int8 const CHECK_THRESHOLD2_MSG[] PROGMEM =
 {
-	"\n\rSlowly Increase the the EXTBAT voltage until a Message appears\n\r"
+	"\n\rSlowly Increase the EXTBAT voltage until a Message appears\n\r"
 	"Press 'X' to exit or ENTER to proceed\n\n\r"
 	"  EXTBAT  VBAT    INTBAT\n\r"
 };
@@ -228,6 +255,98 @@ int8 const UPPER_THRESHOLD_ERROR_MSG[] PROGMEM =
 	"\n\n\r*** UPPER SWITCHING THRESHOLD ERROR ***\n\n\r"
 };
 
+int8 const PROG_SLAVE_MENU_MSG[] PROGMEM =
+{
+	"\n\n\rLeave the '5V' power switch ON and follow the instructions in the Test Method\n\r"
+	"to program the BUT into SLAVE MODE\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+	/*
+	"Open the STM Programming application and ensure the following ST-LINK configuration is set:\n\r"
+	" - Port: SWD\n\r"
+	" - Reset Mode: Hardware Reset\n\r"
+	" - Ensure the 'Verify Programming' check box is selected\n\n\r"
+	"Ensure the Jumper is not fitted to the 'Master/Slave' header, P3\n\r"
+	"Switch the 5V power switch ON\n\r"
+	"Select the 'Connect' option and verify the programmer successfully connects to the BUT\n\r"
+	"** NOTE: On Older firmware versions, use the 'SLAVE' version of the firmware **\n\r"
+	"Open the appropriate '.ELF' file detailed in the Test Method, and program the Device\n\n\r"
+	"Verify the BUT programs and verifies successfully\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+*/
+
+int8 const SLAVE_DISPLAY_MENU_MSG[] PROGMEM =
+{
+	"\n\n\rCycle the power to the BUT using the '5V' Power switch\n\r"
+	"VERIFY on power up, the slave displays briefly shows the correct firmware version\n\n\r"
+	"VERIFY after a short delay the following is shown on the slave display:\n\r"
+	" - The battery charge status in the form 'XX%'\n\r"
+	" - The message 'EXT PWR' is displayed\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+int8 const SLAVE_DISPLAY_MENU2_MSG[] PROGMEM =
+{
+	"VERIFY the 'EXT PWR' message has been replaced with the following:\n\n\r"
+	"                 '-:--' \n\n\r"
+	"VERIFY an 'IDLE' message appears above the battery charge status\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+
+
+int8 const PROG_MASTER_MENU_MSG[] PROGMEM =
+{
+	"Follow the instructions in the Test Method to program the BUT into MASTER MODE\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+int8 const PROG_MASTER_MENU2_MSG[] PROGMEM =
+{
+	"\n\n\rCycle the power to the BUT using the +5V power switch\n\n\r"
+	"VERIFY the slave display is now blank and the Master display shows an\n\r"
+	"'ON/OFF' symbol, and the TRI-Colour LED on the Jig is OFF\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+int8 const MASTER_SWITCH_TOGGLE_MENU_MSG[] PROGMEM =
+{
+	"\n\n\rVERIFY that, when the Master display is touched the following occurs:\n\r"
+	" - an 'EXT PWR' message appears on the Master display\n\r"
+	" - the TRI-Colour LED on the Jig is illuminated and is GREEN in colour\n\n\r"
+	"VERIFY each time the Master display is touched the on/off status is toggled\n\n\r"
+	"Set the display to the ON state\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+int8 const BASE_IFACE_MENU_MSG[] PROGMEM =
+{
+	"\n\n\rVERIFY the Master display now shows the indicated Error Code and the\n\r"
+	"TRI-Colour LED is now illuminated as idicated:\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+
+
+int8 const MASTER_BATTERY_MSG[] PROGMEM =
+{
+	"\n\n\rVERIFY the Master display now shows the message 'BATTERY'\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+int8 const POLYFUSE_TEST_MSG[] PROGMEM =
+{
+	"\n\n\rVERIFY that, after pressing the 'ENTER' key, the following occurs:\n\r"
+	" - The +5V supply for the LED drive is reduced to less than 1.5V after 3 seconds\n\r"
+	" - The TRI-Colour LED is briefly extinguished\n\r"
+	" - The Master display is not affected and still displays 'BATTERY'\n\n\r"
+	"Press 'X' to exit or ENTER to proceed\n\n\r"
+};
+
+int8 const TESTING_DONE_MSG[] PROGMEM =
+{
+	"\n\n\r\x7****************************\n\r"
+	"* Testing is now completed *\n\r"
+	"****************************\n\n\r"
+	" - Turn OFF the 5V Power switch\n\r"
+	" - Remove the Board Under Test & apply TESTED mark\n\r"
+	" - Connect the next board to be tested to the Jig and press 'ENTER'\n\n\r"
+	" - Or press Press 'X' to exit to start menu\n\n\r"
+};
 
 int8 const DEBUG_MENU_MSG[] PROGMEM =
 {
@@ -237,6 +356,7 @@ int8 const DEBUG_MENU_MSG[] PROGMEM =
 	"A - ADC test\n\r"
 	"C - I/O Control test\n\r"
 	"I - I2C test\n\r"
+	"T - Toggle Thresholds for Verification\n\r"
 	"X - Exit to Start Menu\n\r"
 };
 
@@ -244,11 +364,12 @@ int8 const I2C_MENU_MSG[] PROGMEM =
 {
 	"\n\n\n\n\rI2C Test"
 	"\n\r========\n\n\r"
-	"Ensure the Module is Programmed as a Master\n\r"
-	"Connect the Touch Panel LCD to the Module and switch ON\n\n\r"
-	"The '+' key will increment the AMP CODE value displayed by 1\n\r"
-	"The '-' key will decrement the AMP CODE value displayed by 1\n\r"
-	"Press 'X' to return to Test Menu\n\n\r"
+	"NOTE: Ensure the Module is Programmed as a Master\n\n\r"
+	"B - LED is BLUE  - Error Code 0xffff\n\r"
+	"G - LED is GREEN - Error Code 0xfffe\n\r"
+	"R - LED is RED   - Error Code 0xfffd\n\n\r"
+
+	"Press 'X' to return to Debug Menu\n\n\r"
 };
 
 int8 const ADC_DEBUG_MSG[] PROGMEM =
@@ -257,11 +378,11 @@ int8 const ADC_DEBUG_MSG[] PROGMEM =
 	"\n\r=========\n\n\r"
 	"\n\rPress X to exit\n\n\r"
 	"\n\r     All Data in millivolts\n\r"
-	"\n\r  EXT   INT   +5V   OUT   3V3\n\r"
+	"\n\r  EXT   INT   +5V   VBAT  3V3\n\r"
 };
 int8 const ADC_CHAN_LABELS_MSG[] PROGMEM =
 {
-	"\n\r  EXT   INT   +5V   OUT   3V3\n\r"
+	"\n\r  EXT   INT   +5V   VBAT  3V3\n\r"
 };
 
 int8 const CONTROL_DEBUG_MSG[] PROGMEM =
@@ -276,7 +397,19 @@ int8 const CONTROL_DEBUG_MENU_MSG[] PROGMEM =
 	"\n\rE - Toggle EXTBAT status\n\r"
 	"I - Toggle INTBAT status\n\r"
 	"P - Toggle Polyfuse Load status\n\r"
-	"\n\rPress X to exit\n\n\r"
+	"\n\rPress X to exit\n\n\r"	
+	"\n\r  EXT   INT   +5V   VBAT  3V3\n\r"
+};
+int8 const SET_VERIF_THESHOLDS_MSG[] PROGMEM =
+{
+	"\n\n\n\rVerification Threshold modification Menu\n\r"
+	"========================================\n\r"
+	"Select option below to toggle value between actual and verification values\n\n\r"
+	"1 - Increase Lower Threshold\n\r"
+	"2 - Decrease Lower Threshold\n\r"
+	"3 - Increase Upper Threshold\n\r"
+	"4 - Decrease Upper Threshold\n\r"
+	"5 - Lower Polyfuse Trip Threshold\n\r"
 };
 
 /*==================================================================*/
@@ -292,6 +425,13 @@ static VOLTAGE_LIMITS extbat_lims = {EXTBAT_VOLTAGE,EXTBAT_LIIMIT};
 static VOLTAGE_LIMITS intbat_lims = {INTBAT_VOLTAGE,INTBAT_LIIMIT};
 static VOLTAGE_LIMITS _3v3_lims = {_3V3_VOLTAGE,_3V3_LIIMIT};
 static VOLTAGE_LIMITS _5v_lims = {_5V_VOLTAGE,_5V_LIIMIT};
+	
+static int16 lower_switch_threshold = LOWER_SWITCH_THRESH;	// Set default lower switching threshold
+static int16 upper_switch_threshold = UPPER_SWITCH_THRESH;	// Set default upper switching threshold
+static int16 polyfuse_threshold = POLYFUSE_TRIP_THRESHOLD;
+
+static int8 cur_err_code;
+
 
 /*********************************************************************
 *                               FUNCTIONS                            *
@@ -555,9 +695,14 @@ static void Debug_menu(void)
 		case 'X':
 			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
 			break;
+		case 't':
+		case 'T':
+			MEN_Set_cmd_bk_func(SET_VERIF_THESHOLDS_MSG,Set_verif_thresh_menu);
+			break;
 		case 'I':
 		case 'i':
-			MEN_Set_cmd_bk_func(I2C_MENU_MSG,I2C_menu);
+			I2C_Init();
+			MEN_Set_cmd_bk_func(I2C_MENU_MSG,I2C_Debug_menu);
 			break;
 	    default:
 			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
@@ -565,6 +710,7 @@ static void Debug_menu(void)
 		    break;
     }
 }
+
 /*====================================================================
 Name		:
 Parameters	:
@@ -641,7 +787,6 @@ Description	:
 --------------------------------------------------------------------*/
 static void Check_extbat(void)
 {
-	CHAN_AVERAGE *ca;
 	VOLTAGE_LIMITS vbat;
 	
 	vbat.nominal = extbat_lims.nominal;
@@ -683,7 +828,6 @@ Description	:
 
 static void Check_intbat(void)
 {
-	CHAN_AVERAGE *ca;
 	VOLTAGE_LIMITS vbat;
 	
 	vbat.nominal = intbat_lims.nominal;
@@ -704,7 +848,7 @@ static void Check_intbat(void)
 		if(Check_chan_voltages(ADC_3V3,&_3v3_lims))
 		{
 			if(Check_chan_voltages(ADC_VBAT,&vbat))
-				MEN_Set_cmd_bk_func(CONNECT_J8_MSG,Connect_j8_menu);
+				MEN_Set_cmd_bk_func(SWICTH_5V_ON_MSG,Switch_5v_on_menu);
 			else
 				Set_retry_func(Check_intbat);
 		}
@@ -722,7 +866,7 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-static void Connect_j8_menu(void)
+static void Switch_5v_on_menu(void)
 {
 	int8 rx_byte;
 
@@ -747,7 +891,7 @@ static void Connect_j8_menu(void)
 			break;
 		default:
 			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
-			MEN_Set_cmd_bk_func(CONNECT_J8_MSG,Connect_j8_menu);
+			MEN_Set_cmd_bk_func(SWICTH_5V_ON_MSG,Switch_5v_on_menu);
 		break;
 	}
 	
@@ -761,10 +905,6 @@ Description	:
 --------------------------------------------------------------------*/
 static void Check_5v(void)
 {
-	CHAN_AVERAGE *ca;
-	
-//	MAI_Set_control_status(INTBAT_CNTRL,ON); // Turn on EXTBAT supply to BUT
-//	TIM_Wait(500);	// set 0.5s delay
 	if(!Check_chan_voltages(ADC_POLYFUSE,&_5v_lims))
 	{
 		Set_retry_func(Check_5v);
@@ -773,7 +913,8 @@ static void Check_5v(void)
 	{
 		if(Check_chan_voltages(ADC_3V3,&_3v3_lims))
 		{
-			MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_threshold1_menu);
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_lower_threshold_menu);
 			MAI_Set_control_status(EXTBAT_CNTRL,ON); // Turn on EXTBAT supply to BUT
 			TIM_Wait(250);
 			MAI_Set_control_status(INTBAT_CNTRL,ON); // Turn on INTBAT supply to BUT
@@ -793,7 +934,7 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-static void Check_threshold1_menu(void)
+static void Check_lower_threshold_menu(void)
 {
 	int8 rx_byte;
 	int16 extbat,intbat,vbat;
@@ -808,46 +949,44 @@ static void Check_threshold1_menu(void)
 		Display_tracking_voltages(&extbat,&intbat,&vbat);
 		
 		// check if we are tracking extbat
-		if(vbat >= (extbat - VBAT_TRACKING_LIMIT) && vbat <= (extbat + VBAT_TRACKING_LIMIT))
+		if((vbat >= (extbat - VBAT_TRACKING_LIMIT)) && (vbat <= (extbat + VBAT_TRACKING_LIMIT)))
 		{
 			// we are still tracking extbat - Check if we should have switched
-			if(vbat < (LOWER_SWITCH_THESH - SWITCH_THRESH_TOL))
+			if((vbat < (lower_switch_threshold - SWITCH_THRESH_TOL)))
 			{
 				//Display error
 				ASC_Asci_msg((int8 *const)ROM_Read_romstr(LOWER_THRESHOLD_ERROR_MSG));
-				sprintf(tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",LOWER_SWITCH_THESH,SWITCH_THRESH_TOL,extbat );
+				sprintf((char *)tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",lower_switch_threshold,SWITCH_THRESH_TOL,extbat );
 				ASC_Asci_msg(tmpstr);
-				Set_retry_func(Check_threshold1_menu);
+				Set_retry_func(Check_lower_threshold_menu);
 			}
 			return;
 		}
-		// we are no longer tracking extbat so check if we are now tracking intbat
-		else if(vbat >= (intbat - VBAT_TRACKING_LIMIT) && vbat <= (intbat + VBAT_TRACKING_LIMIT))
+		// we are no longer tracking extbat so if threshold is ok
+		else if((extbat > (lower_switch_threshold - SWITCH_THRESH_TOL)) && (extbat < (lower_switch_threshold + SWITCH_THRESH_TOL)))
 		{
-			// we are tracking intbat so check threshold is in tolerance
-			if(extbat > (LOWER_SWITCH_THESH - SWITCH_THRESH_TOL) && extbat < (LOWER_SWITCH_THESH + SWITCH_THRESH_TOL))
-			{
-				// in tolerance so display result
-				ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
-				sprintf(tmpstr, "\n\n\rLower Threshold OK @ %umV\n\r",extbat);
-				ASC_Asci_msg(tmpstr);
-				MEN_Set_cmd_bk_func(CHECK_THRESHOLD2_MSG,Check_threshold2_menu);
-			}
-			else
-			{
-				//Display error
-				ASC_Asci_msg((int8 *const)ROM_Read_romstr(LOWER_THRESHOLD_ERROR_MSG));
-				sprintf(tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",LOWER_SWITCH_THESH,SWITCH_THRESH_TOL,extbat );
-				ASC_Asci_msg(tmpstr);
-//				ASC_Asci_msg((int8 *const)ROM_Read_romstr(VOLTAGE_TITLE_MSG));
-//				Display_tracking_voltages(&extbat,&intbat,&vbat);
-				Set_retry_func(Check_threshold1_menu);
-			}
-			
+			// in tolerance so display result
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			sprintf((char *)tmpstr, "\n\n\r\x7Lower Threshold OK @ %umV\n\r",extbat);
+			ASC_Asci_msg(tmpstr);
+			MEN_Set_cmd_bk_func(CHECK_THRESHOLD2_MSG,Check_upper_threshold_menu);
+			TIM_Set_delay(500);
+			while(!TIM_Get_delay_flag());
+			return;
 		}
-		return;
-	}
+		else
+		{
+			//Display error
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(LOWER_THRESHOLD_ERROR_MSG));
+			sprintf((char *)tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",lower_switch_threshold,SWITCH_THRESH_TOL,extbat );
+			ASC_Asci_msg(tmpstr);
+			//				ASC_Asci_msg((int8 *const)ROM_Read_romstr(VOLTAGE_TITLE_MSG));
+			//				Display_tracking_voltages(&extbat,&intbat,&vbat);
+			Set_retry_func(Check_lower_threshold_menu);
+			return;
+		}
 
+	}
 	/* now process RX char */
 	switch(rx_byte)
 	{
@@ -857,13 +996,19 @@ static void Check_threshold1_menu(void)
 			break;
 		default:
 			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
-			MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_threshold1_menu);
+			MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_lower_threshold_menu);
 		break;
 	}
 	
 		
 }
-static void Check_threshold2_menu(void)
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+static void Check_upper_threshold_menu(void)
 {
 	int8 rx_byte;
 	int16 extbat,intbat,vbat;
@@ -881,40 +1026,38 @@ static void Check_threshold2_menu(void)
 		if(vbat >= (intbat - VBAT_TRACKING_LIMIT) && vbat <= (intbat + VBAT_TRACKING_LIMIT))
 		{
 			// we are still tracking - Check if we should have switched
-			if(extbat > (UPPER_SWITCH_THRESH + SWITCH_THRESH_TOL))
+			if(extbat > (upper_switch_threshold + SWITCH_THRESH_TOL))
 			{
 				//Display error
 				ASC_Asci_msg((int8 *const)ROM_Read_romstr(UPPER_THRESHOLD_ERROR_MSG));
-				sprintf(tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",UPPER_SWITCH_THRESH,SWITCH_THRESH_TOL,extbat );
+				sprintf((char *)tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",upper_switch_threshold,SWITCH_THRESH_TOL,extbat );
 				ASC_Asci_msg(tmpstr);
-				Set_retry_func(Check_threshold2_menu);
+				Set_retry_func(Check_upper_threshold_menu);
 			}
 			return;
 		}
-		// we are no longer tracking intbat so check if we are now tracking extbat
-		else if(vbat >= (extbat - VBAT_TRACKING_LIMIT) && vbat <= (extbat + VBAT_TRACKING_LIMIT))
+		// we are no longer tracking intbat so check if thresh is ok
+		else if(extbat > (upper_switch_threshold - SWITCH_THRESH_TOL) && extbat < (upper_switch_threshold + SWITCH_THRESH_TOL))
 		{
-			// we are tracking extbat so check threshold is in tolerance
-			if(extbat > (UPPER_SWITCH_THRESH - SWITCH_THRESH_TOL) && extbat < (UPPER_SWITCH_THRESH + SWITCH_THRESH_TOL))
-			{
-				// in tolerance so display result
-				ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
-				sprintf(tmpstr, "\n\n\rUpper Threshold OK @ %umV\n\r",extbat);
-				ASC_Asci_msg(tmpstr);
-				ASC_Asci_msg("\n\n\r NOW DO POLYFUSE STUFF !\n\r");
-				MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
-			}
-			else
-			{
-				//Display error
-				ASC_Asci_msg((int8 *const)ROM_Read_romstr(UPPER_THRESHOLD_ERROR_MSG));
-				sprintf(tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",UPPER_SWITCH_THRESH,SWITCH_THRESH_TOL,extbat );
-				ASC_Asci_msg(tmpstr);
-				Set_retry_func(Check_threshold2_menu);
-			}
-			
+			// in tolerance so display result
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			sprintf((char *)tmpstr, "\n\n\r\x7Upper Threshold OK @ %umV\n\r",extbat);
+			ASC_Asci_msg(tmpstr);
+			// Turn off extbat and intbat supplies
+			MAI_Set_control_status(EXTBAT_CNTRL,OFF);
+			MAI_Set_control_status(INTBAT_CNTRL,OFF);
+			MEN_Set_cmd_bk_func(PROG_SLAVE_MENU_MSG,Prog_slave_menu);
+			return;
 		}
-		return;
+		else
+		{
+			//Display error
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(UPPER_THRESHOLD_ERROR_MSG));
+			sprintf((char *)tmpstr,"\n\rThreshold = %dmV +/- %dmV\n\rEXTBAT = %dmV\n\r",upper_switch_threshold,SWITCH_THRESH_TOL,extbat );
+			ASC_Asci_msg(tmpstr);
+			Set_retry_func(Check_upper_threshold_menu);
+			return;
+		}
 	}
 
 	/* now process RX char */
@@ -922,21 +1065,27 @@ static void Check_threshold2_menu(void)
 	{
 		case 'x':
 		case 'X':
-		MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
-		break;
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
 		default:
-		ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
-		MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_threshold1_menu);
-		break;
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(CHECK_THRESHOLD1_MSG,Check_lower_threshold_menu);
+			break;
 	}
 		
 }
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	: Retrieves and displays averaged EXTBAT, INTABAT and VBAT voltages
+--------------------------------------------------------------------*/
 static void Display_tracking_voltages(int16 *extbat_ptr, int16 *intbat_ptr, int16 *vbat_ptr)
 {
 	while(!ADC_Get_average_millivolts(extbat_ptr,ADC_EXTBAT));
 	while(!ADC_Get_average_millivolts(intbat_ptr,ADC_INTBAT));
 	while(!ADC_Get_average_millivolts(vbat_ptr,ADC_VBAT));
-	sprintf(tmpstr,"  %05u   %05u   %05u\r",*extbat_ptr,*vbat_ptr,*intbat_ptr);
+	sprintf((char *)tmpstr,"  %05u   %05u   %05u\r",*extbat_ptr,*vbat_ptr,*intbat_ptr);
 	ASC_Asci_msg(tmpstr);
 }
 /*====================================================================
@@ -951,18 +1100,18 @@ static int8 Check_chan_voltages(ADC_CHAN_ID chan,VOLTAGE_LIMITS *vlim)
 
 	ca = ADC_Get_chan_average(chan,8);
 //	sprintf(tmpstr,"%s: AVG=%umV MAX=%umV MIN=%umV - ",ADC_Get_chan_name(chan),ca->avg,ca->max,ca->min);
-	sprintf(tmpstr,"%s = %umV - ",ADC_Get_chan_name(chan),ca->avg);
+	sprintf((char *)tmpstr,"%s = %umV - ",ADC_Get_chan_name(chan),ca->avg);
 	ASC_Asci_msg(tmpstr);
 	if(ca->avg > (vlim->nominal + vlim->limit))
 	{
 		ASC_Asci_msg((int8 *const)ROM_Read_romstr(FAIL_MSG));
-		sprintf(tmpstr,"\n\n\r*** %s Voltage too high - %umV +/- %umV ***\n\r",ADC_Get_chan_name(chan), vlim->nominal,vlim->limit);
+		sprintf((char *)tmpstr,"\n\n\r*** %s Voltage too high - %umV +/- %umV ***\n\r",ADC_Get_chan_name(chan), vlim->nominal,vlim->limit);
 		ASC_Asci_msg(tmpstr);
 	}
 	else if(ca->avg < (vlim->nominal - vlim->limit))
 	{
 		ASC_Asci_msg((int8 *const)ROM_Read_romstr(FAIL_MSG));
-		sprintf(tmpstr,"\n\n\r*** %s Voltage too low - %umV +/- %umV ***\n\r",ADC_Get_chan_name(chan), vlim->nominal,vlim->limit);
+		sprintf((char *)tmpstr,"\n\n\r*** %s Voltage too low - %umV +/- %umV ***\n\r",ADC_Get_chan_name(chan), vlim->nominal,vlim->limit);
 		ASC_Asci_msg(tmpstr);
 	}
 	else
@@ -979,29 +1128,37 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-static int8 cur_i2c_err_code;
-
-static void I2C_menu(void)
+static void Prog_slave_menu(void)
 {
-	int8 buf[5];
+	int8 rx_byte;
 
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
 
-	I2C_Init();
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			MAI_Set_control_status(EXTBAT_CNTRL,OFF); // Turn on EXTBAT supply
+			MAI_Set_control_status(INTBAT_CNTRL,OFF); // Turn off INTBAT supply
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MEN_Set_cmd_bk_func(SLAVE_DISPLAY_MENU_MSG,Slave_display_menu);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(PROG_SLAVE_MENU_MSG,Prog_slave_menu);
+		break;
+	}
 	
-	// Set initial AMP CODE to 1
-	cur_i2c_err_code = 1;
-	// Display Current AMP CODE on terminal
-	sprintf((char *)tmpstr,"Displaying %02x\r",cur_i2c_err_code);
-	ASC_Asci_msg(tmpstr);
-				
-	//Set i2c data buffer
-	buf[0] = DISPLAY_AMP_ERROR_CODE;	// set code to display AMP CODE on LCD
-	buf[1] = cur_i2c_err_code;	// Set data to display as AMP CODE on LCD
-				
-	// Send 2 bytes of data stored in buf, to STM I2C interface
-	I2C_Write(STM_I2C_ADDR,2,buf);
-				
-	MEN_Set_cmd_bk_func(NULL,I2C_test);
+		
 }
 /*====================================================================
 Name		:
@@ -1009,10 +1166,359 @@ Parameters	:
 Returns		:
 Description	:
 --------------------------------------------------------------------*/
-	
-static void I2C_test(void)
+static void Slave_display_menu(void)
 {
 	int8 rx_byte;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			MAI_Set_control_status(EXTBAT_CNTRL,OFF); // Turn off EXTBAT supply
+			MAI_Set_control_status(INTBAT_CNTRL,ON); // Turn on EXTBAT supply
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MEN_Set_cmd_bk_func(SLAVE_DISPLAY_MENU2_MSG,Slave_display_menu2);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(SLAVE_DISPLAY_MENU_MSG,Slave_display_menu);
+			break;
+	}
+}
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+static void Slave_display_menu2(void)
+{
+	int8 rx_byte;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			MAI_Set_control_status(EXTBAT_CNTRL,OFF); // Turn on EXTBAT supply
+			MAI_Set_control_status(INTBAT_CNTRL,OFF); // Turn on EXTBAT supply
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MEN_Set_cmd_bk_func(PROG_MASTER_MENU_MSG,Prog_master_menu);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(SLAVE_DISPLAY_MENU2_MSG,Slave_display_menu2);
+			break;
+	}
+}
+static void Prog_master_menu(void)
+{
+	int8 rx_byte;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			MAI_Set_control_status(EXTBAT_CNTRL,OFF); // Turn off EXTBAT supply
+			MAI_Set_control_status(INTBAT_CNTRL,OFF); // Turn off EXTBAT supply
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MEN_Set_cmd_bk_func(PROG_MASTER_MENU2_MSG,Prog_master_menu2);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(PROG_MASTER_MENU_MSG,Prog_master_menu);
+			break;
+	}
+	
+}
+static void Prog_master_menu2(void)
+{
+	int8 rx_byte;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+	return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			MAI_Set_control_status(EXTBAT_CNTRL,ON); // Turn on EXTBAT supply
+			MAI_Set_control_status(INTBAT_CNTRL,OFF); // Turn on EXTBAT supply
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MEN_Set_cmd_bk_func(MASTER_SWITCH_TOGGLE_MENU_MSG,Base_iface_menu);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(PROG_MASTER_MENU_MSG,Prog_master_menu2);
+			break;
+	}
+	
+}
+static void Base_iface_menu(void)
+{
+	int8 rx_byte,buf[5];
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			// Now set up I²C iface to display AMP CODE 0xfffd - RED LED
+			I2C_Init();
+			buf[0] = DISPLAY_AMP_ERROR_CODE;// set code to display AMP CODE on LCD
+			buf[1] = AMP_ERROR_CODE_MSB;	// Set data to display as AMP CODE on LCD
+			buf[1] = AMP_ERROR_CODE_RED_LSB;// Set data to display as AMP CODE on LCD
+			cur_err_code = AMP_ERROR_CODE_RED_LSB;
+			I2C_Write(STM_I2C_ADDR,3,buf);
+			TIM_Set_delay(2000);
+			MEN_Set_cmd_bk_func(BASE_IFACE_MENU_MSG,Base_iface_menu2);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(MASTER_SWITCH_TOGGLE_MENU_MSG,Base_iface_menu);
+			break;
+	}
+		
+}
+
+static void Base_iface_menu2(void)
+{
+	int8 rx_byte,buf[5],*msg_ptr;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(rx_byte)
+	{
+		/* now process RX char */
+		switch(rx_byte)
+		{
+			case 'x':
+			case 'X':
+				MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+				break;
+			case '\r':
+			case '\n':
+				ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+				// set up to run from internal battery only
+				MAI_Set_control_status(EXTBAT_CNTRL,OFF); // Turn off EXTBAT supply
+				MAI_Set_control_status(INTBAT_CNTRL,ON); // Turn on EXTBAT supply
+				// Now set up I²C iface to display 'BATTERY' instead of amp code
+				buf[0] = DISPLAY_AMP_ERROR_CODE;	// set code to display AMP CODE on LCD
+				buf[1] = 0x00; //AMP_ERROR_CODE_MSB;	// Set data to display as AMP CODE on LCD
+				buf[2] = DISPLAY_AMP_NO_ERROR_CODE;	// Set LSB data to display as AMP CODE on LCD
+				I2C_Write(STM_I2C_ADDR,3,buf);
+				I2C_Shutdown();
+				MEN_Set_cmd_bk_func(MASTER_BATTERY_MSG,Polyfuse_test_menu);
+				break;
+			default:
+				ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+				break;
+		}
+	}
+	else
+	{
+		if(!TIM_Get_delay_flag())
+			return;
+		buf[0] = DISPLAY_AMP_ERROR_CODE;// set code to display AMP CODE on LCD
+		buf[1] = AMP_ERROR_CODE_MSB;	// Set data to display as AMP CODE on LCD
+		if(++cur_err_code == 0)
+		{
+			cur_err_code = AMP_ERROR_CODE_RED_LSB;
+			msg_ptr = (int8 *)"RED";
+		}
+		else if(cur_err_code == AMP_ERROR_CODE_BLUE_LSB)
+			msg_ptr = (int8 *)"BLUE";
+		else
+			msg_ptr = (int8 *)"GREEN";
+
+		buf[2] = cur_err_code;// Set data to display as AMP CODE on LCD
+		I2C_Write(STM_I2C_ADDR,3,buf);
+		sprintf((char *)tmpstr,"Displaying Error Code 0x%02x%02x LED is %s     \r",(int16)AMP_ERROR_CODE_MSB,(int16)cur_err_code,msg_ptr);
+		ASC_Asci_msg(tmpstr);
+		
+		TIM_Set_delay(2000);
+	}
+		
+}
+static void Polyfuse_test_menu(void)
+{
+	int8 rx_byte;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MEN_Set_cmd_bk_func(POLYFUSE_TEST_MSG,Polyfuse_test);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(MASTER_BATTERY_MSG,Polyfuse_test_menu);
+			break;
+	}
+	
+}
+static void Polyfuse_test(void)
+{
+	int8 rx_byte,x;
+	int16 polyfuse_millivolts;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(NEWPAGE_MSG));
+			MAI_Set_control_status(POLYFUSE_CNTRL,ON); // Turn on POLYFUSE Load
+			ASC_Asci_msg((int8 *)"\n\n\rPolyfuse  Time\n\r");
+			for(x = 0; x < POLYFUSE_TRIP_TIME; x++)
+			{
+				TIM_Set_delay(1000);
+				while(!TIM_Get_delay_flag())
+				{
+					while(!ADC_Get_average_millivolts(&polyfuse_millivolts,ADC_POLYFUSE));
+					sprintf((char *)tmpstr," %04dmV    %d\r",polyfuse_millivolts,x);
+					ASC_Asci_msg(tmpstr);
+				}		
+			}
+			if(polyfuse_millivolts < polyfuse_threshold)
+				sprintf((char *)tmpstr," \n\n\rPOLYFUSE Test PASS: Voltage after %d seconds = %05dmV",POLYFUSE_TRIP_TIME,polyfuse_millivolts);
+			else
+			{
+				sprintf((char *)tmpstr," \n\n\rPOLYFUSE Test FAIL: Voltage after %d seconds = %05dmV (Threshold = %05dmV)",POLYFUSE_TRIP_TIME,polyfuse_millivolts, polyfuse_threshold);
+				ASC_Asci_msg(tmpstr);
+				MEN_Set_cmd_bk_func(RETRY_OR_EXIT_MSG,Polyfuse_test);
+			
+				MAI_Set_control_status(POLYFUSE_CNTRL,OFF); // Turn off POLYFUSE Load
+				return;
+			}
+			ASC_Asci_msg(tmpstr);
+			
+			MAI_Set_control_status(POLYFUSE_CNTRL,OFF); // Turn off POLYFUSE Load
+			
+			MAI_Set_control_status(EXTBAT_CNTRL,OFF);
+			MAI_Set_control_status(INTBAT_CNTRL,OFF);
+			
+			MEN_Set_cmd_bk_func(TESTING_DONE_MSG,Test_done);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(POLYFUSE_TEST_MSG,Polyfuse_test);
+			break;
+	}
+	
+}
+
+static void Test_done(void)
+{
+	int8 rx_byte;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case 'x':
+		case 'X':
+			MEN_Set_cmd_bk_func(START_MENU_MSG,Start_menu);
+			break;
+		case '\r':
+		case '\n':
+			MEN_Set_cmd_bk_func(TEST_MENU_MSG,Test_menu);
+			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(TESTING_DONE_MSG,Test_done);
+		break;
+	}
+	
+}
+/*====================================================================
+Name		:
+Parameters	:
+Returns		:
+Description	:
+--------------------------------------------------------------------*/
+static void I2C_Debug_menu(void)
+{
+	int8 rx_byte,errcode_lsb = 0xff,*msg_ptr = NULL;
 	int8 buf[5];
 
 
@@ -1020,31 +1526,52 @@ static void I2C_test(void)
 	rx_byte = Cmd_check(NO_CMD_ECHO);
 	/* return if none available */
 	if(!rx_byte)
-		return;
+	return;
 
 	switch(rx_byte)
 	{
+		case 'B':
+		case 'b':
+			errcode_lsb = AMP_ERROR_CODE_BLUE_LSB;
+			msg_ptr = (int8 *)"BLUE";
+			break;
+		case 'G':
+		case 'g':
+			errcode_lsb = AMP_ERROR_CODE_GREEN_LSB;
+			msg_ptr = (int8 *)"GREEN";
+			break;
+		case 'R':
+		case 'r':
+			errcode_lsb = AMP_ERROR_CODE_RED_LSB;
+			msg_ptr = (int8 *)"RED";
+			break;
 		case 'X':
-		case 'x':	
+		case 'x':
+			buf[0] = DISPLAY_AMP_ERROR_CODE;	// set code to display AMP CODE on LCD
+			buf[1] = 0x00; //AMP_ERROR_CODE_MSB;	// Set data to display as AMP CODE on LCD
+			buf[2] = DISPLAY_AMP_NO_ERROR_CODE;	// Set LSB data to display as AMP CODE on LCD
+			I2C_Write(STM_I2C_ADDR,3,buf);
 			I2C_Shutdown();
 			MEN_Set_cmd_bk_func(DEBUG_MENU_MSG,Debug_menu);
 			return;
-		case '+':
-			cur_i2c_err_code++;
-			break;
-		case '-':
-			cur_i2c_err_code--;
-			break;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			MEN_Set_cmd_bk_func(I2C_MENU_MSG,I2C_Debug_menu);
+			return;	
 	}
-	// Send 2 bytes of data stored in buf, to STM I2C interface
-	sprintf((char *)tmpstr,"Displaying %02x\r",cur_i2c_err_code);
+	// Display Current AMP CODE on terminal
+	sprintf((char *)tmpstr,"Displaying Error Code 0x%02x%02x LED is %s     \r",(int16)AMP_ERROR_CODE_MSB,(int16)errcode_lsb,msg_ptr);
 	ASC_Asci_msg(tmpstr);
+				
 	//Set i2c data buffer
 	buf[0] = DISPLAY_AMP_ERROR_CODE;	// set code to display AMP CODE on LCD
-	buf[1] = cur_i2c_err_code;	// Set data to display as AMP CODE on LCD
-	I2C_Write(STM_I2C_ADDR,2,buf);
-		
-} 
+	buf[1] = AMP_ERROR_CODE_MSB;	// Set data to display as AMP CODE on LCD
+	buf[2] = errcode_lsb;	// Set LSB data to display as AMP CODE on LCD
+				
+	// Send 2 bytes of data stored in buf, to STM I2C interface
+	I2C_Write(STM_I2C_ADDR,3,buf);
+				
+}
 /*====================================================================
 Name		:
 Parameters	:
@@ -1135,7 +1662,7 @@ static void Control_debug_menu(void)
 }
 static void Adc_display_values(void)
 {
-	int8 x,*chan_name;
+	int8 x;
 	int16 adcvolts;
 
 	for(x = 0; x < ADC_CHAN_COUNT;x++)
@@ -1150,6 +1677,68 @@ static void Adc_display_values(void)
 		}
 	}
 	sprintf((char *)tmpstr,"\r");
+	ASC_Asci_msg(tmpstr);
+}
+static void Set_verif_thresh_menu(void)
+{
+	int8 rx_byte;
+
+	/* get any RX chars */
+	rx_byte = Cmd_check(CMD_ECHO);
+	/* return if none available */
+	if(!rx_byte)
+		return;
+	//	ASC_Asci_msg((int8 *const)ROM_Read_romstr(ADC_CHAN_LABELS_MSG));
+
+	/* now process RX char */
+	switch(rx_byte)
+	{
+		case '1':
+			if(lower_switch_threshold == LOWER_SWITCH_THRESH)
+				lower_switch_threshold = LOWER_THRESH_VERIF_HIGH;
+			else
+				lower_switch_threshold = LOWER_SWITCH_THRESH;
+			break;
+		case '2':
+			if(lower_switch_threshold == LOWER_SWITCH_THRESH)
+				lower_switch_threshold = LOWER_THRESH_VERIF_LOW;
+			else
+				lower_switch_threshold = LOWER_SWITCH_THRESH;
+			break;
+		case '3':
+			if(upper_switch_threshold == UPPER_SWITCH_THRESH)
+				upper_switch_threshold = UPPER_THRESH_VERIF_HIGH;
+			else
+				upper_switch_threshold = UPPER_SWITCH_THRESH;
+			break;
+		case '4':
+			if(upper_switch_threshold == UPPER_SWITCH_THRESH)
+				upper_switch_threshold = UPPER_THRESH_VERIF_LOW;
+			else
+				upper_switch_threshold = UPPER_SWITCH_THRESH;
+			break;
+		case '5':
+			if(polyfuse_threshold == POLYFUSE_TRIP_THRESHOLD)
+				polyfuse_threshold = POLYFUSE_TRIP_THRESH_VERIF;
+			else
+				polyfuse_threshold = POLYFUSE_TRIP_THRESHOLD;
+			break;
+		case 'X':
+		case 'x':
+			MEN_Set_cmd_bk_func(DEBUG_MENU_MSG,Debug_menu);
+			return;
+		default:
+			ASC_Asci_msg((int8 *const)ROM_Read_romstr(CMD_NOT_IMPLEMENTED_MSG));
+			break;
+	
+	}
+	Display_current_thresholds();
+	MEN_Set_cmd_bk_func(SET_VERIF_THESHOLDS_MSG,Set_verif_thresh_menu);
+	
+}
+static void Display_current_thresholds(void)
+{
+	sprintf((char *)tmpstr,"\n\n\rLower Threshold = %05dmV\n\rUpper Threshold = %05dmV\n\rPolyfuse Threshold = %05dmV\n\n\r",lower_switch_threshold,upper_switch_threshold,polyfuse_threshold);
 	ASC_Asci_msg(tmpstr);
 }
 /*********************************************************************
