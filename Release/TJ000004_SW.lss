@@ -418,7 +418,7 @@ Disassembly of section .text:
     11be:	0a 0d 00                                            ...
 
 000011c1 <FW_PN>:
-    11c1:	56 65 72 20 42 31 2e 30 00                          Ver B1.0.
+    11c1:	56 65 72 20 56 31 2e 30 00                          Ver V1.0.
 
 000011ca <__ctors_end>:
     11ca:	11 24       	eor	r1, r1
