@@ -302,8 +302,9 @@ int8 const PROG_MASTER_MENU_MSG[] PROGMEM =
 int8 const PROG_MASTER_MENU2_MSG[] PROGMEM =
 {
 	"\n\n\rCycle the power to the BUT using the +5V power switch\n\n\r"
-	"VERIFY the slave display is now blank and the Master display shows an\n\r"
-	"'ON/OFF' symbol, and the TRI-Colour LED on the Jig is OFF\n\n\r"
+	"VERIFY the slave display is now blank and the Master display briefly shows\n\r"
+	"the correct firmware version along with an 'ON/OFF' symbol, and the \n\r"
+	"TRI-Colour LED on the Jig is OFF\n\n\r"
 	"Press 'X' to exit or ENTER to proceed\n\n\r"
 };
 int8 const MASTER_SWITCH_TOGGLE_MENU_MSG[] PROGMEM =
